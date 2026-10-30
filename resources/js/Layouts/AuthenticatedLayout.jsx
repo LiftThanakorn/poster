@@ -60,7 +60,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </Link>
                             </div>
 
-                            <div className="hidden space-x-7 sm:-my-px sm:ms-10 sm:flex">
+                            <div className="hidden space-x-3 sm:-my-px sm:ms-6 md:space-x-4 lg:space-x-5 xl:space-x-6 sm:flex">
                                 <NavLink
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
@@ -73,14 +73,14 @@ export default function AuthenticatedLayout({ header, children }) {
                                     active={route().current('posts.*')}
                                 >
                                     <Newspaper className="h-4 w-4 mr-1.5 shrink-0" />
-                                    <span>ข่าวสาร (Posts)</span>
+                                    <span>ข่าวสาร</span>
                                 </NavLink>
                                 <NavLink
                                     href={route('media.index')}
                                     active={route().current('media.*')}
                                 >
                                     <FolderOpen className="h-4 w-4 mr-1.5 shrink-0" />
-                                    <span>คลังไฟล์ (Media)</span>
+                                    <span>คลังไฟล์</span>
                                 </NavLink>
                                 <NavLink
                                     href={route('announcements.index')}
@@ -94,14 +94,14 @@ export default function AuthenticatedLayout({ header, children }) {
                                     active={route().current('templates.*')}
                                 >
                                     <LayoutTemplate className="h-4 w-4 mr-1.5 shrink-0" />
-                                    <span>เทมเพลต (Templates)</span>
+                                    <span>เทมเพลต</span>
                                 </NavLink>
                                 <NavLink
                                     href={route('settings.integrations')}
                                     active={route().current('settings.*')}
                                 >
                                     <Share2 className="h-4 w-4 mr-1.5 shrink-0" />
-                                    <span>การเชื่อมต่อ (Integrations)</span>
+                                    <span>การเชื่อมต่อ</span>
                                 </NavLink>
                             </div>
                         </div>
@@ -234,7 +234,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             <span className="flex items-center gap-2">
                                 <Newspaper className="h-4 w-4 text-slate-500" />
-                                <span>ข่าวสาร (Posts)</span>
+                                <span>ข่าวสาร</span>
                             </span>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
@@ -243,7 +243,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             <span className="flex items-center gap-2">
                                 <FolderOpen className="h-4 w-4 text-slate-500" />
-                                <span>คลังไฟล์ (Media)</span>
+                                <span>คลังไฟล์</span>
                             </span>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
@@ -261,7 +261,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             <span className="flex items-center gap-2">
                                 <LayoutTemplate className="h-4 w-4 text-slate-500" />
-                                <span>เทมเพลต (Templates)</span>
+                                <span>เทมเพลต</span>
                             </span>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
@@ -270,7 +270,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             <span className="flex items-center gap-2">
                                 <Share2 className="h-4 w-4 text-slate-500" />
-                                <span>การเชื่อมต่อ (Integrations)</span>
+                                <span>การเชื่อมต่อ</span>
                             </span>
                         </ResponsiveNavLink>
                     </div>
