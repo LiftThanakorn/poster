@@ -4,13 +4,13 @@ namespace App\Services;
 
 class GoogleDriveFilenameBuilder
 {
-    public const CATEGORY_DAILY = 'รายวัน';
+    public const CATEGORY_DAILY = 'พนักงานรายวัน';
 
     public const CATEGORY_CONTRACT = 'พนักงานประจำตามสัญญา';
 
     public const CATEGORY_UNIVERSITY = 'พนักงานมหาวิทยาลัย';
 
-    public const CATEGORY_OTHER = 'พนักงานอื่นๆ';
+    public const CATEGORY_OTHER = 'งบประเภทอื่น ๆ';
 
     public const STAGE_ANNOUNCEMENT = 'รับสมัคร';
 
@@ -122,7 +122,13 @@ class GoogleDriveFilenameBuilder
     public static function normalizeThaiFolderName(string $name): string
     {
         $normalized = trim($name);
-        $normalized = (string) preg_replace('/\s+ๆ/u', 'ๆ', $normalized);
+        if ($normalized === 'รายวัน' || $normalized === 'พนักงานรายวัน') {
+            return 'พนักงานรายวัน';
+        }
+        if (preg_match('/^(พนักงาน|งบประเภท)อื่น\s*ๆ?$/u', $normalized)) {
+            return 'งบประเภทอื่น ๆ';
+        }
+        $normalized = (string) preg_replace('/\s+ๆ/u', ' ๆ', $normalized);
         $normalized = (string) preg_replace('/ๆ\s+/u', 'ๆ ', $normalized);
         $normalized = (string) preg_replace('/\s+/u', ' ', $normalized);
 

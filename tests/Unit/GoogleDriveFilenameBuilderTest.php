@@ -49,18 +49,23 @@ class GoogleDriveFilenameBuilderTest extends TestCase
     public function test_it_normalizes_thai_folder_names_with_or_without_spaces(): void
     {
         $this->assertSame(
-            'พนักงานอื่นๆ',
-            GoogleDriveFilenameBuilder::normalizeThaiFolderName('พนักงานอื่น ๆ')
+            'งบประเภทอื่น ๆ',
+            GoogleDriveFilenameBuilder::normalizeThaiFolderName('งบประเภทอื่น ๆ')
         );
 
         $this->assertSame(
-            'พนักงานอื่นๆ',
+            'งบประเภทอื่น ๆ',
             GoogleDriveFilenameBuilder::normalizeThaiFolderName('  พนักงานอื่นๆ  ')
         );
 
         $this->assertSame(
-            'รายวัน',
+            'พนักงานรายวัน',
             GoogleDriveFilenameBuilder::normalizeThaiFolderName('รายวัน')
+        );
+
+        $this->assertSame(
+            'พนักงานรายวัน',
+            GoogleDriveFilenameBuilder::normalizeThaiFolderName('พนักงานรายวัน')
         );
     }
 
@@ -79,10 +84,10 @@ class GoogleDriveFilenameBuilderTest extends TestCase
     public function test_it_provides_valid_categories_and_stages(): void
     {
         $categories = GoogleDriveFilenameBuilder::categories();
-        $this->assertContains('รายวัน', $categories);
+        $this->assertContains('พนักงานรายวัน', $categories);
         $this->assertContains('พนักงานประจำตามสัญญา', $categories);
         $this->assertContains('พนักงานมหาวิทยาลัย', $categories);
-        $this->assertContains('พนักงานอื่นๆ', $categories);
+        $this->assertContains('งบประเภทอื่น ๆ', $categories);
 
         $stages = GoogleDriveFilenameBuilder::stages();
         $this->assertContains('รับสมัคร', $stages);

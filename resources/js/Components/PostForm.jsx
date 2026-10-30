@@ -66,7 +66,7 @@ export default function PostForm({
         drive_sync_enabled: initialData?.drive_sync_enabled !== undefined
             ? Boolean(initialData.drive_sync_enabled)
             : Boolean(googleDriveConfig?.is_connected),
-        drive_employee_category: initialData?.drive_employee_category || googleDriveConfig?.default_category || 'รายวัน',
+        drive_employee_category: initialData?.drive_employee_category || googleDriveConfig?.default_category || 'พนักงานรายวัน',
         drive_announcement_stage: initialData?.drive_announcement_stage || googleDriveConfig?.default_stage || 'รับสมัคร',
         drive_document_date: initialData?.drive_document_date || today,
         drive_position_title: initialData?.drive_position_title || '',
@@ -517,7 +517,7 @@ export default function PostForm({
         }
         const docDate = data.drive_document_date || today;
         const stage = data.drive_announcement_stage || googleDriveConfig?.default_stage || 'รับสมัคร';
-        const cat = data.drive_employee_category || googleDriveConfig?.default_category || 'รายวัน';
+        const cat = data.drive_employee_category || googleDriveConfig?.default_category || 'พนักงานรายวัน';
         const pos = data.drive_position_title ? `-${data.drive_position_title.trim()}` : '';
         return `${docDate} ${stage}-${cat}${pos}.pdf`;
     };
@@ -1001,7 +1001,7 @@ export default function PostForm({
                                                                 onChange={(e) => setData('drive_employee_category', e.target.value)}
                                                                 className="w-full text-xs rounded-lg border-slate-300 py-1.5 focus:border-[#000080] focus:ring-[#000080]"
                                                             >
-                                                                {(googleDriveConfig?.categories || ['รายวัน', 'พนักงานประจำตามสัญญา', 'พนักงานมหาวิทยาลัย', 'พนักงานอื่นๆ']).map((cat) => (
+                                                                {(googleDriveConfig?.categories || ['พนักงานรายวัน', 'พนักงานประจำตามสัญญา', 'พนักงานมหาวิทยาลัย', 'งบประเภทอื่น ๆ']).map((cat) => (
                                                                     <option key={cat} value={cat}>
                                                                         {cat}
                                                                     </option>

@@ -93,7 +93,7 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
         google_drive_client_id: googleDrive.client_id || '',
         google_drive_client_secret: '',
         google_drive_root_folder_id: googleDrive.root_folder_id || '',
-        google_drive_default_category: googleDrive.default_category || 'รายวัน',
+        google_drive_default_category: googleDrive.default_category || 'พนักงานรายวัน',
         google_drive_default_stage: googleDrive.default_stage || 'รับสมัคร',
         google_drive_default_comment_template: googleDrive.default_comment_template || "📄 เอกสารประกาศฉบับเต็ม:\n{drive_url}",
     });
@@ -544,7 +544,7 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                             className="block w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-[#000080] focus:ring-[#000080]"
                                         />
                                         <p className="mt-1 text-xs text-slate-500">
-                                            ระบบจะค้นหาหรือสร้างโฟลเดอร์ย่อย 4 ประเภท (รายวัน, พนักงานประจำตามสัญญา, พนักงานมหาวิทยาลัย, พนักงานอื่นๆ) และขั้นตอน 3 ขั้น (รับสมัคร, ประกาศรายชื่อ, ผลการคัดเลือก) ในโฟลเดอร์นี้ให้อัตโนมัติ
+                                            ระบบจะค้นหาหรือสร้างโฟลเดอร์ย่อย 4 ประเภท (พนักงานรายวัน, พนักงานประจำตามสัญญา, พนักงานมหาวิทยาลัย, งบประเภทอื่น ๆ) และขั้นตอน 3 ขั้น (รับสมัคร, ประกาศรายชื่อ, ผลการคัดเลือก) ในโฟลเดอร์นี้ให้อัตโนมัติ
                                         </p>
                                     </div>
 
@@ -603,10 +603,10 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                                 onChange={(e) => setData('google_drive_default_category', e.target.value)}
                                                 className="block w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-[#000080] focus:ring-[#000080]"
                                             >
-                                                <option value="รายวัน">รายวัน</option>
+                                                <option value="พนักงานรายวัน">พนักงานรายวัน</option>
                                                 <option value="พนักงานประจำตามสัญญา">พนักงานประจำตามสัญญา</option>
                                                 <option value="พนักงานมหาวิทยาลัย">พนักงานมหาวิทยาลัย</option>
-                                                <option value="พนักงานอื่นๆ">พนักงานอื่นๆ</option>
+                                                <option value="งบประเภทอื่น ๆ">งบประเภทอื่น ๆ</option>
                                             </select>
                                         </div>
 

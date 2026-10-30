@@ -37,7 +37,7 @@ export default function TemplateForm({
         drive_sync_enabled: template?.drive_sync_enabled !== null && template?.drive_sync_enabled !== undefined
             ? Boolean(template.drive_sync_enabled)
             : true,
-        drive_employee_category: template?.drive_employee_category || googleDriveConfig?.default_category || 'รายวัน',
+        drive_employee_category: template?.drive_employee_category || googleDriveConfig?.default_category || 'พนักงานรายวัน',
         drive_announcement_stage: template?.drive_announcement_stage || googleDriveConfig?.default_stage || 'รับสมัคร',
         action_buttons: template?.action_buttons || [],
         pdf_media_id: template?.pdf_media_id || null,

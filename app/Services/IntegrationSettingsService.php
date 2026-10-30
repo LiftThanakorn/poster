@@ -95,19 +95,10 @@ class IntegrationSettingsService
                 'root_folder_id' => (string) ($settings['root_folder_id'] ?? config('services.google_drive.root_folder_id', '')),
                 'root_folder_name' => (string) ($settings['root_folder_name'] ?? 'ไดรฟ์หลักสำหรับเก็บประกาศ'),
                 'connected_email' => (string) ($settings['connected_email'] ?? ''),
-                'employee_categories' => (array) ($settings['employee_categories'] ?? [
-                    'รายวัน',
-                    'พนักงานประจำตามสัญญา',
-                    'พนักงานมหาวิทยาลัย',
-                    'พนักงานอื่นๆ',
-                ]),
-                'announcement_stages' => (array) ($settings['announcement_stages'] ?? [
-                    'รับสมัคร',
-                    'ประกาศรายชื่อ',
-                    'ผลการคัดเลือก',
-                ]),
-                'default_category' => (string) ($settings['default_category'] ?? 'รายวัน'),
-                'default_stage' => (string) ($settings['default_stage'] ?? 'รับสมัคร'),
+                'employee_categories' => (array) ($settings['employee_categories'] ?? GoogleDriveFilenameBuilder::categories()),
+                'announcement_stages' => (array) ($settings['announcement_stages'] ?? GoogleDriveFilenameBuilder::stages()),
+                'default_category' => (string) ($settings['default_category'] ?? GoogleDriveFilenameBuilder::CATEGORY_DAILY),
+                'default_stage' => (string) ($settings['default_stage'] ?? GoogleDriveFilenameBuilder::STAGE_ANNOUNCEMENT),
                 'default_comment_template' => (string) ($settings['default_comment_template'] ?? $settings['default_fb_comment_template'] ?? "📄 เอกสารประกาศฉบับเต็ม:\n{drive_url}"),
                 'default_fb_comment_template' => (string) ($settings['default_fb_comment_template'] ?? 'รายละเอียดประกาศฉบับเต็ม: {drive_url}'),
             ];

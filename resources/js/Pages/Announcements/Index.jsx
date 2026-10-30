@@ -38,7 +38,7 @@ export default function AnnouncementsIndex({
 
     const { data, setData, post, processing, errors, reset } = useForm({
         pdf_file: null,
-        category: driveConfig.default_category || categories[0] || 'รายวัน',
+        category: driveConfig.default_category || categories[0] || 'พนักงานรายวัน',
         stage: driveConfig.default_stage || stages[0] || 'รับสมัคร',
         document_date: today,
         position_title: '',
@@ -52,7 +52,7 @@ export default function AnnouncementsIndex({
         }
         const date = data.document_date || today;
         const stage = data.stage || 'รับสมัคร';
-        const cat = data.category || 'รายวัน';
+        const cat = data.category || 'พนักงานรายวัน';
         const pos = data.position_title ? `-${data.position_title.trim()}` : '';
         return `${date} ${stage}-${cat}${pos}.pdf`;
     };
