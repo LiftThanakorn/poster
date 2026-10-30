@@ -184,6 +184,13 @@ class IntegrationController extends Controller
 
     public function googleDriveRedirect(Request $request): RedirectResponse
     {
+        $settings = $this->settingsService->getSettings('google_drive');
+        $credentials = $this->settingsService->getCredentials('google_drive');
+
+        if (empty($settings['client_id']) || empty($credentials['client_secret'])) {
+            return to_route('settings.integrations')->with('error', 'กรุณากรอก Google Client ID และ Client Secret แล้วกด "บันทึกการตั้งค่า" ก่อนกดเชื่อมต่อ Google Account');
+        }
+
         $state = Str::random(40);
         $request->session()->put('google_oauth_state', $state);
 

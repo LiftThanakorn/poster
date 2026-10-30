@@ -439,6 +439,12 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                             ) : (
                                                 <a
                                                     href={route('settings.integrations.google-drive.redirect')}
+                                                    onClick={(e) => {
+                                                        if (!googleDrive.client_id || (!googleDrive.client_secret_configured && !data.google_drive_client_secret)) {
+                                                            e.preventDefault();
+                                                            alert('กรุณากรอก Google Client ID และ Client Secret ด้านล่าง แล้วกด "บันทึกการตั้งค่า" ก่อนเชื่อมต่อ Google Account ครับ');
+                                                        }
+                                                    }}
                                                     className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
                                                 >
                                                     <LogIn className="h-4 w-4" />
