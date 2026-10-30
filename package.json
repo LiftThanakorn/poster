@@ -1,0 +1,42 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite"
+    },
+    "devDependencies": {
+        "@headlessui/react": "^2.0.0",
+        "@inertiajs/react": "^2.0.0",
+        "@tailwindcss/forms": "^0.5.3",
+        "@tailwindcss/vite": "^4.0.0",
+        "@vitejs/plugin-react": "^4.2.0",
+        "autoprefixer": "^10.4.12",
+        "concurrently": "^10.0.3",
+        "laravel-vite-plugin": "^3.1",
+        "postcss": "^8.4.31",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tailwindcss": "^3.2.1",
+        "vite": "^8.0.0"
+    },
+    "optionalDependencies": {
+        "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "@fontsource/sarabun": "^5.3.0",
+        "@tailwindcss/typography": "^0.5.20",
+        "@tiptap/pm": "^3.31.4",
+        "@tiptap/react": "^3.31.4",
+        "@tiptap/starter-kit": "^3.31.4",
+        "axios": "^1.20.0",
+        "date-fns": "^4.4.0",
+        "dompurify": "^3.4.16",
+        "konva": "^10.7.0",
+        "lucide-react": "^1.49.0",
+        "react-datepicker": "^9.1.0",
+        "react-konva": "18.2.16",
+        "sweetalert2": "^11.26.25"
+    }
+}

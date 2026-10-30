@@ -1,0 +1,31 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Allow direct access to privacy-policy, terms, data-deletion
+    RewriteCond %{REQUEST_URI} ^/poster/(privacy-policy\.html|terms-of-service\.html|data-deletion\.html|privacy/|terms/|deletion/) [NC]
+    RewriteRule ^ - [L]
+
+    # Rewrite static build assets to public/build/
+    RewriteRule ^build/(.*)$ public/build/$1 [L]
+
+    # Rewrite storage to public/storage/ (NO loop)
+    RewriteRule ^storage/(.*)$ public/storage/$1 [L]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
