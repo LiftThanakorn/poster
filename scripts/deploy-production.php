@@ -63,12 +63,11 @@ echo "    - Adding build/ (Vite assets) ...\n";
 $zip->addEmptyDir('build');
 addFolderToZip($zip, "$projectRoot/public/build", 'build');
 
-echo "    - Adding vendor QR packages (endroid, bacon, dasprid, composer) ...\n";
+echo "    - Adding vendor QR packages (endroid, bacon, dasprid) ...\n";
 $vendorDirs = [
     'vendor/endroid' => 'vendor/endroid',
     'vendor/bacon' => 'vendor/bacon',
     'vendor/dasprid' => 'vendor/dasprid',
-    'vendor/composer' => 'vendor/composer',
 ];
 foreach ($vendorDirs as $src => $dest) {
     if (is_dir("$projectRoot/$src")) {

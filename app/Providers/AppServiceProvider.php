@@ -16,7 +16,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        spl_autoload_register(function (string $class): bool {
+            $prefixes = [
+                'Endroid\\QrCode\\' => base_path('vendor/endroid/qr-code/src/'),
+                'BaconQrCode\\' => base_path('vendor/bacon/bacon-qr-code/src/'),
+                'DASPRiD\\Enum\\' => base_path('vendor/dasprid/enum/src/'),
+            ];
+
+            foreach ($prefixes as $prefix => $baseDir) {
+                if (str_starts_with($class, $prefix)) {
+                    $relativeClass = substr($class, strlen($prefix));
+                    $file = $baseDir.str_replace('\\', '/', $relativeClass).'.php';
+                    if (file_exists($file)) {
+                        require_once $file;
+
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        });
     }
 
     /**
