@@ -39,7 +39,7 @@ const MenuBar = ({ editor }) => {
         editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     }, [editor]);
 
-    if (!editor) {
+    if (!editor || editor.isDestroyed || !editor.state) {
         return null;
     }
 
@@ -168,6 +168,7 @@ const MenuBar = ({ editor }) => {
 
 export default function RichTextEditor({ value, onChange }) {
     const editor = useEditor({
+        immediatelyRender: false,
         extensions: [
             StarterKit.configure({
                 link: {
@@ -178,21 +179,37 @@ export default function RichTextEditor({ value, onChange }) {
                 },
             }),
         ],
-        content: value,
+        content: value || '',
         editorProps: {
             attributes: {
                 class: 'prose prose-slate prose-sm sm:prose-base max-w-none focus:outline-none min-h-[220px] p-4 bg-white text-slate-800 leading-relaxed [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1.5 [&_p]:my-2.5 [&_p]:text-sm sm:[&_p]:text-base [&_p]:leading-relaxed',
             },
         },
-        onUpdate: ({ editor }) => {
-            onChange(editor.getHTML());
+        onUpdate: ({ editor: currentEditor }) => {
+            if (currentEditor && !currentEditor.isDestroyed && currentEditor.state?.schema) {
+                try {
+                    onChange?.(currentEditor.getHTML());
+                } catch {
+                    // Ignore transient serialization errors
+                }
+            }
         },
     });
 
     // Update content when value from prop changes and it's different from editor state
     useEffect(() => {
-        if (editor && value !== editor.getHTML()) {
-            editor.commands.setContent(value, false);
+        if (!editor || editor.isDestroyed || !editor.state?.schema) {
+            return;
+        }
+
+        try {
+            const currentHtml = editor.getHTML();
+            const nextValue = value || '';
+            if (currentHtml !== nextValue) {
+                editor.commands.setContent(nextValue, false);
+            }
+        } catch {
+            // Guard against edge-case destruction during unmount
         }
     }, [value, editor]);
 
