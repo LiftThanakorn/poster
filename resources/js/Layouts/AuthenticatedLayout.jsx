@@ -10,6 +10,7 @@ import {
     LayoutTemplate,
     Newspaper,
     Plus,
+    QrCode,
     Share2,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -95,6 +96,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <LayoutTemplate className="h-4 w-4 mr-1.5 shrink-0" />
                                     <span>เทมเพลต</span>
+                                </NavLink>
+                                <NavLink
+                                    href={route('qr-codes.index')}
+                                    active={route().current('qr-codes.*')}
+                                >
+                                    <QrCode className="h-4 w-4 mr-1.5 shrink-0" />
+                                    <span>QR Code</span>
                                 </NavLink>
                                 <NavLink
                                     href={route('settings.integrations')}
@@ -262,6 +270,15 @@ export default function AuthenticatedLayout({ header, children }) {
                             <span className="flex items-center gap-2">
                                 <LayoutTemplate className="h-4 w-4 text-slate-500" />
                                 <span>เทมเพลต</span>
+                            </span>
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('qr-codes.index')}
+                            active={route().current('qr-codes.*')}
+                        >
+                            <span className="flex items-center gap-2">
+                                <QrCode className="h-4 w-4 text-slate-500" />
+                                <span>QR Code</span>
                             </span>
                         </ResponsiveNavLink>
                         <ResponsiveNavLink

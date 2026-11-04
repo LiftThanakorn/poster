@@ -35,6 +35,7 @@
         "dompurify": "^3.4.16",
         "konva": "^10.7.0",
         "lucide-react": "^1.49.0",
+        "qrcode": "^1.5.4",
         "react-datepicker": "^9.1.0",
         "react-konva": "18.2.16",
         "sweetalert2": "^11.26.25"

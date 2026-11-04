@@ -1,11 +1,15 @@
 import axios from 'axios';
 import { resolveStorageUrl } from '@/Utils/media';
+import { generateQrDataUrl } from '@/Utils/qrcode';
+import QrSelectorPopover from '@/Components/QrCode/QrSelectorPopover';
 import {
     BringToFront,
     Copy,
     ImagePlus,
     Minus,
     Plus,
+    QrCode as QrIcon,
+    RefreshCw,
     Save,
     SendToBack,
     Trash2,
@@ -103,7 +107,7 @@ function useCanvasImage(src) {
 function EditorElement({ item, selected, onSelect, onChange }) {
     const shapeRef = useRef(null);
     const transformerRef = useRef(null);
-    const image = useCanvasImage(item.type === 'image' ? item.src : null);
+    const image = useCanvasImage(item.type === 'image' || item.type === 'qr' ? item.src : null);
 
     useEffect(() => {
         if (selected && transformerRef.current && shapeRef.current) {
@@ -132,12 +136,13 @@ function EditorElement({ item, selected, onSelect, onChange }) {
             return;
         }
 
+        const minDimension = item.type === 'qr' ? 64 : 20;
         onChange({
             ...item,
             x: node.x(),
             y: node.y(),
-            width: Math.max(20, node.width() * scaleX),
-            height: Math.max(20, node.height() * scaleY),
+            width: Math.max(minDimension, node.width() * scaleX),
+            height: Math.max(minDimension, node.height() * scaleY),
             rotation: node.rotation(),
         });
     };
@@ -188,10 +193,16 @@ function EditorElement({ item, selected, onSelect, onChange }) {
                     name="editor-transformer"
                     rotateEnabled
                     flipEnabled={false}
-                    keepRatio={item.type === 'image'}
-                    boundBoxFunc={(oldBox, newBox) => (
-                        newBox.width < 20 || newBox.height < 20 ? oldBox : newBox
-                    )}
+                    keepRatio={item.type === 'image' || item.type === 'qr'}
+                    enabledAnchors={
+                        item.type === 'qr'
+                            ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+                            : undefined
+                    }
+                    boundBoxFunc={(oldBox, newBox) => {
+                        const minDimension = item.type === 'qr' ? 64 : 20;
+                        return newBox.width < minDimension || newBox.height < minDimension ? oldBox : newBox;
+                    }}
                 />
             )}
         </>
@@ -245,6 +256,7 @@ export default function ImageEditorModal({
     const [isUploading, setIsUploading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [localMedia, setLocalMedia] = useState(mediaList);
+    const [isQrPopoverOpen, setIsQrPopoverOpen] = useState(false);
     const backgroundCanvasImage = useCanvasImage(backgroundImage?.src || null);
     const backgroundCrop = useMemo(
         () => coverCrop(backgroundCanvasImage, canvasSize.width, canvasSize.height),
@@ -259,7 +271,7 @@ export default function ImageEditorModal({
 
         const handleResize = () => setViewportWidth(window.innerWidth);
         const handleEscape = (event) => {
-            if (event.key === 'Escape') onClose();
+            if (event.key === 'Escape' && !isQrPopoverOpen) onClose();
         };
 
         window.addEventListener('resize', handleResize);
@@ -288,6 +300,84 @@ export default function ImageEditorModal({
         availableWidth / canvasSize.width,
         620 / canvasSize.height,
     );
+
+    // Re-generate in-memory data URLs for QR elements on load if missing
+    useEffect(() => {
+        let isMounted = true;
+        const qrElementsWithoutSrc = elements.filter((el) => el.type === 'qr' && !el.src && el.scanUrl);
+        if (qrElementsWithoutSrc.length === 0) return;
+
+        Promise.all(
+            qrElementsWithoutSrc.map(async (el) => {
+                const styling = el.styling || {};
+                const dataUrl = await generateQrDataUrl(el.scanUrl, {
+                    size: 800,
+                    margin: Number(styling.margin) || 2,
+                    errorCorrectionLevel: styling.errorCorrection || 'H',
+                    darkColor: styling.darkColor || '#000000',
+                    lightColor: styling.lightColor || '#ffffff',
+                    transparentBg: styling.transparentBg ?? false,
+                });
+                return { id: el.id, src: dataUrl };
+            })
+        ).then((resolved) => {
+            if (!isMounted) return;
+            setElements((current) => current.map((item) => {
+                const found = resolved.find((r) => r.id === item.id);
+                return found ? { ...item, src: found.src } : item;
+            }));
+        });
+
+        return () => { isMounted = false; };
+    }, []);
+
+    const addQrElement = (qrData) => {
+        const size = Math.min(260, Math.round(canvasSize.width * 0.25));
+        const item = {
+            id: createId(),
+            type: 'qr',
+            qrCodeId: qrData.qrCodeId,
+            code: qrData.code,
+            title: qrData.title,
+            targetUrl: qrData.targetUrl,
+            scanUrl: qrData.scanUrl,
+            src: qrData.src,
+            styling: qrData.styling || {},
+            x: (canvasSize.width - size) / 2,
+            y: (canvasSize.height - size) / 2,
+            width: size,
+            height: size,
+            rotation: 0,
+            opacity: 1,
+        };
+        setElements((current) => [...current, item]);
+        setSelectedId(item.id);
+    };
+
+    const updateQrStyling = async (patch) => {
+        if (!selectedElement || selectedElement.type !== 'qr') return;
+        const currentStyling = selectedElement.styling || {};
+        const nextStyling = { ...currentStyling, ...patch };
+
+        try {
+            const dataUrl = await generateQrDataUrl(selectedElement.scanUrl, {
+                size: 800,
+                margin: Number(nextStyling.margin) || 2,
+                errorCorrectionLevel: nextStyling.errorCorrection || 'H',
+                darkColor: nextStyling.darkColor || '#000000',
+                lightColor: nextStyling.lightColor || '#ffffff',
+                transparentBg: nextStyling.transparentBg ?? false,
+            });
+
+            updateElement({
+                ...selectedElement,
+                styling: nextStyling,
+                src: dataUrl,
+            });
+        } catch {
+            // Error
+        }
+    };
 
     const updateElement = (nextElement) => {
         setElements((current) => current.map((item) => (
@@ -523,13 +613,22 @@ export default function ImageEditorModal({
                 { type: 'image/png' },
             );
             const media = await uploadMedia(file);
+            // Clean elements to remove heavy base64 src for QR elements before saving to DB
+            const sanitizedElements = elements.map((item) => {
+                if (item.type === 'qr') {
+                    const { src, ...cleanQr } = item;
+                    return cleanQr;
+                }
+                return item;
+            });
+
             const editorData = {
                 version: 1,
                 canvasWidth: canvasSize.width,
                 canvasHeight: canvasSize.height,
                 backgroundColor,
                 backgroundImage,
-                elements,
+                elements: sanitizedElements,
             };
 
             setLocalMedia((current) => [media, ...current]);
@@ -563,7 +662,7 @@ export default function ImageEditorModal({
 
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
                     <aside className="w-full shrink-0 overflow-y-auto border-b border-slate-200 bg-white p-4 lg:w-[360px] lg:border-b-0 lg:border-r">
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 lg:grid-cols-1">
                             <button
                                 type="button"
                                 onClick={addText}
@@ -571,6 +670,14 @@ export default function ImageEditorModal({
                             >
                                 <Type className="h-4 w-4" />
                                 เพิ่มข้อความ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsQrPopoverOpen(true)}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-900 hover:bg-indigo-100"
+                            >
+                                <QrIcon className="h-4 w-4 text-indigo-700" />
+                                เพิ่ม QR Code
                             </button>
                             <button
                                 type="button"
@@ -676,10 +783,63 @@ export default function ImageEditorModal({
                             <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
                                 <div className="flex items-center justify-between">
                                     <p className="text-sm font-semibold text-slate-800">
-                                        {selectedElement.type === 'text' ? 'ตั้งค่าข้อความ' : 'ตั้งค่ารูป'}
+                                        {selectedElement.type === 'text'
+                                            ? 'ตั้งค่าข้อความ'
+                                            : selectedElement.type === 'qr'
+                                            ? 'ตั้งค่า Dynamic QR Code'
+                                            : 'ตั้งค่ารูป'}
                                     </p>
                                     <span className="text-[11px] text-slate-400">วัตถุที่เลือก</span>
                                 </div>
+
+                                {selectedElement.type === 'qr' && (
+                                    <div className="mt-3 space-y-3">
+                                        <div className="rounded-lg bg-white p-2.5 border border-slate-200 space-y-1">
+                                            <div className="font-bold text-xs text-slate-900 truncate">
+                                                {selectedElement.title || 'Dynamic QR Code'}
+                                            </div>
+                                            <div className="text-[11px] font-mono text-[#000080]">
+                                                /qr/{selectedElement.code}
+                                            </div>
+                                            <div className="text-[10px] text-slate-500 font-mono truncate">
+                                                {selectedElement.targetUrl}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[11px] text-slate-500 block mb-1">สีตัวโค้ด</label>
+                                                <input
+                                                    type="color"
+                                                    value={selectedElement.styling?.darkColor || '#000000'}
+                                                    onChange={(e) => updateQrStyling({ darkColor: e.target.value })}
+                                                    className="h-7 w-full cursor-pointer rounded border border-slate-200 p-0.5"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[11px] text-slate-500 block mb-1">พื้นหลัง</label>
+                                                <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer pt-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedElement.styling?.transparentBg ?? false}
+                                                        onChange={(e) => updateQrStyling({ transparentBg: e.target.checked })}
+                                                        className="rounded border-slate-300 text-[#000080]"
+                                                    />
+                                                    โปร่งใส
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsQrPopoverOpen(true)}
+                                            className="w-full py-1.5 px-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center justify-center gap-1.5"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            สลับเป็น QR Code อื่น
+                                        </button>
+                                    </div>
+                                )}
 
                                 {selectedElement.type === 'text' && (
                                     <div className="mt-3 space-y-3">
@@ -1025,6 +1185,13 @@ export default function ImageEditorModal({
                     </main>
                 </div>
             </div>
+
+            {/* QR Code Popover Selector & Creator */}
+            <QrSelectorPopover
+                open={isQrPopoverOpen}
+                onClose={() => setIsQrPopoverOpen(false)}
+                onSelectQr={addQrElement}
+            />
         </div>
     );
 }

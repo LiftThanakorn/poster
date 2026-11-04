@@ -6,6 +6,8 @@ use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QrCodeController;
+use App\Http\Controllers\QrRedirectController;
 use App\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -77,6 +79,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Templates
     Route::resource('templates', TemplateController::class);
+
+    // Dynamic QR Codes
+    Route::get('/qr-codes/{qrCode}/analytics', [QrCodeController::class, 'analytics'])->name('qr-codes.analytics');
+    Route::resource('qr-codes', QrCodeController::class);
+});
+
+// Public Dynamic QR Redirection & Image Serving
+Route::middleware('throttle:120,1')->group(function () {
+    Route::get('/qr/{code}', [QrRedirectController::class, 'redirect'])->name('qr.redirect');
+    Route::get('/qr/{code}/image', [QrCodeController::class, 'image'])->name('qr.image');
 });
 
 Route::middleware('auth')->group(function () {
