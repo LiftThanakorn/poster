@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -271,31 +272,36 @@ class QrCodeController extends Controller
             }
         }
 
-        if ($format === 'png') {
-            $content = $this->qrGenerator->generatePng(
-                $qrCode->scan_url,
-                $size,
-                $margin,
-                $ecc,
-                $dark,
-                $light,
-                $transparent,
-                $logoPath,
-            );
-            $mime = 'image/png';
-        } else {
-            $content = $this->qrGenerator->generateSvg(
-                $qrCode->scan_url,
-                $size,
-                $margin,
-                $ecc,
-                $dark,
-                $light,
-                $transparent,
-                $logoPath,
-            );
-            $mime = 'image/svg+xml';
-            $format = 'svg';
+        try {
+            if ($format === 'png') {
+                $content = $this->qrGenerator->generatePng(
+                    $qrCode->scan_url,
+                    $size,
+                    $margin,
+                    $ecc,
+                    $dark,
+                    $light,
+                    $transparent,
+                    $logoPath,
+                );
+                $mime = 'image/png';
+            } else {
+                $content = $this->qrGenerator->generateSvg(
+                    $qrCode->scan_url,
+                    $size,
+                    $margin,
+                    $ecc,
+                    $dark,
+                    $light,
+                    $transparent,
+                    $logoPath,
+                );
+                $mime = 'image/svg+xml';
+                $format = 'svg';
+            }
+        } catch (\Throwable $e) {
+            Log::error('QR code generation error: '.$e->getMessage());
+            abort(404, 'ไม่สามารถสร้างภาพ QR Code ได้');
         }
 
         $headers = [

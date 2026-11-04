@@ -63,6 +63,20 @@ echo "    - Adding build/ (Vite assets) ...\n";
 $zip->addEmptyDir('build');
 addFolderToZip($zip, "$projectRoot/public/build", 'build');
 
+echo "    - Adding vendor QR packages (endroid, bacon, dasprid, composer) ...\n";
+$vendorDirs = [
+    'vendor/endroid' => 'vendor/endroid',
+    'vendor/bacon' => 'vendor/bacon',
+    'vendor/dasprid' => 'vendor/dasprid',
+    'vendor/composer' => 'vendor/composer',
+];
+foreach ($vendorDirs as $src => $dest) {
+    if (is_dir("$projectRoot/$src")) {
+        $zip->addEmptyDir($dest);
+        addFolderToZip($zip, "$projectRoot/$src", $dest);
+    }
+}
+
 $zip->close();
 echo '    Package created successfully ('.number_format(filesize($zipPath) / 1024, 2)." KB)\n";
 
@@ -162,6 +176,10 @@ try {
         recurseCopy("$tempDir/build", "$baseDir/build");
         recurseCopy("$tempDir/build", "$rootDir/build");
         $res['steps'][] = 'Deployed build/ to public/build and root/build';
+    }
+    if (is_dir("$tempDir/vendor")) {
+        recurseCopy("$tempDir/vendor", "$baseDir/vendor");
+        $res['steps'][] = 'Copied vendor/ folder';
     }
 } catch (\Throwable $e) {
     $res['errors'][] = 'Copy failed: ' . $e->getMessage();

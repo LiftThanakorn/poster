@@ -226,6 +226,7 @@ class MediaController extends Controller
     public function update(Request $request, PostMedia $media): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
+            'file' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
             'original_name' => 'nullable|string|max:255',
             'category' => 'nullable|string|max:100',
             'folder_id' => 'nullable',
@@ -238,11 +239,29 @@ class MediaController extends Controller
         }
 
         $updateData = [];
-        if ($request->has('original_name') && trim((string) $validated['original_name']) !== '') {
+
+        if ($request->hasFile('file')) {
+            $newFile = $request->file('file');
+            // Delete old file from storage & public storage
+            if ($media->file_path) {
+                Storage::disk('public')->delete($media->file_path);
+                $pubPath = public_path('storage/'.$media->file_path);
+                if (file_exists($pubPath)) {
+                    @unlink($pubPath);
+                }
+            }
+
+            $newPath = $newFile->store('media', 'public');
+            $updateData['file_path'] = $newPath;
+            $updateData['file_size'] = $newFile->getSize();
+            $updateData['mime_type'] = $newFile->getMimeType();
+        }
+
+        if ($request->has('original_name') && trim((string) ($validated['original_name'] ?? '')) !== '') {
             $updateData['original_name'] = trim((string) $validated['original_name']);
         }
         if ($request->has('category')) {
-            $updateData['category'] = trim((string) $validated['category']) ?: null;
+            $updateData['category'] = trim((string) ($validated['category'] ?? '')) ?: null;
         }
         if ($request->has('folder_id')) {
             $updateData['folder_id'] = $resolvedFolderId;

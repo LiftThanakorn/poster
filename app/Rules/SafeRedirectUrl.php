@@ -49,7 +49,16 @@ class SafeRedirectUrl implements ValidationRule
         $host = strtolower($parts['host']);
 
         // Block localhost, .local, .internal, .test domains in production
-        if (! app()->environment('local', 'testing')) {
+        $isLocalOrTesting = false;
+        try {
+            if (function_exists('app') && app()->has('config')) {
+                $isLocalOrTesting = in_array(config('app.env'), ['local', 'testing'], true);
+            }
+        } catch (\Throwable) {
+            $isLocalOrTesting = false;
+        }
+
+        if (! $isLocalOrTesting) {
             if (
                 $host === 'localhost' ||
                 str_ends_with($host, '.local') ||

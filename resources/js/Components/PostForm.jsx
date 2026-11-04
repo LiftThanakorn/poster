@@ -1635,6 +1635,7 @@ export default function PostForm({
                         open={isImageEditorOpen}
                         onClose={() => setIsImageEditorOpen(false)}
                         mediaList={localMedia}
+                        currentMediaId={data.featured_image_id}
                         initialImageUrl={selectedImageUrl}
                         initialData={data.image_editor_data}
                         suggestedUrls={contextSuggestedUrls}

@@ -217,6 +217,7 @@ export default function ImageEditorModal({
     initialData = null,
     suggestedUrls = [],
     defaultQrTitle = '',
+    currentMediaId = null,
     onSave,
     onMediaUploaded,
 }) {
@@ -259,6 +260,14 @@ export default function ImageEditorModal({
     const [isUploading, setIsUploading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [localMedia, setLocalMedia] = useState(mediaList);
+    const [activeMediaId, setActiveMediaId] = useState(currentMediaId || null);
+
+    useEffect(() => {
+        if (currentMediaId) {
+            setActiveMediaId(currentMediaId);
+        }
+    }, [currentMediaId]);
+
     const [isQrPopoverOpen, setIsQrPopoverOpen] = useState(false);
     const isQrPopoverOpenRef = useRef(false);
     isQrPopoverOpenRef.current = isQrPopoverOpen;
@@ -475,6 +484,18 @@ export default function ImageEditorModal({
 
         return response.data.media;
     };
+
+    const updateMedia = async (mediaId, file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_method', 'PUT');
+
+        const response = await axios.post(route('media.update', mediaId), formData, {
+            headers: { Accept: 'application/json' },
+        });
+
+        return response.data.media;
+    };
     const handleImageUpload = async (event) => {
         const file = event.target.files?.[0];
         event.target.value = '';
@@ -578,7 +599,7 @@ export default function ImageEditorModal({
         setCanvasSize({ width: preset.width, height: preset.height });
     };
 
-    const saveDesign = async () => {
+    const saveDesign = async ({ overwrite = true } = {}) => {
         const stage = stageRef.current;
         if (!stage) return;
 
@@ -621,7 +642,19 @@ export default function ImageEditorModal({
                 `template-design-${Date.now()}.png`,
                 { type: 'image/png' },
             );
-            const media = await uploadMedia(file);
+
+            let media;
+            const shouldOverwrite = Boolean(overwrite && activeMediaId);
+
+            if (shouldOverwrite) {
+                media = await updateMedia(activeMediaId, file);
+                setLocalMedia((current) => current.map((item) => (String(item.id) === String(media.id) ? media : item)));
+            } else {
+                media = await uploadMedia(file);
+                setActiveMediaId(media.id);
+                setLocalMedia((current) => [media, ...current.filter((item) => String(item.id) !== String(media.id))]);
+            }
+
             // Clean elements to remove heavy base64 src for QR elements before saving to DB
             const sanitizedElements = elements.map((item) => {
                 if (item.type === 'qr') {
@@ -640,9 +673,11 @@ export default function ImageEditorModal({
                 elements: sanitizedElements,
             };
 
-            setLocalMedia((current) => [media, ...current]);
             onMediaUploaded?.(media);
-            await onSave?.({ media, editorData });
+            await onSave?.({ media, editorData, isNew: !shouldOverwrite });
+        } catch (error) {
+            console.error('Failed to save design:', error);
+            window.alert('เกิดข้อผิดพลาดในการบันทึกรูป: ' + (error.response?.data?.message || error.message || 'โปรดลองใหม่อีกครั้ง'));
         } finally {
             setIsSaving(false);
         }
@@ -1191,23 +1226,48 @@ export default function ImageEditorModal({
                             <div className="text-xs text-slate-500">
                                 Canvas {canvasSize.width} × {canvasSize.height}px • ลากวัตถุเพื่อจัดตำแหน่ง
                             </div>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex items-center justify-end gap-2">
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
                                 >
                                     ยกเลิก
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={saveDesign}
-                                    disabled={isSaving || isUploading}
-                                    className="inline-flex items-center gap-2 rounded-md bg-[#000080] px-5 py-2 text-sm font-bold text-white hover:bg-blue-900 disabled:opacity-50"
-                                >
-                                    <Save className="h-4 w-4" />
-                                    {isSaving ? 'กำลังบันทึก...' : 'บันทึกรูป'}
-                                </button>
+                                {activeMediaId ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => saveDesign({ overwrite: false })}
+                                            disabled={isSaving || isUploading}
+                                            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-900 disabled:opacity-50 transition"
+                                            title="สร้างเป็นรูปใหม่แยกในคลังสื่อ โดยไม่แก้ไขทับรูปเดิม"
+                                        >
+                                            <Copy className="h-4 w-4 text-slate-500" />
+                                            บันทึกเป็นรูปใหม่
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => saveDesign({ overwrite: true })}
+                                            disabled={isSaving || isUploading}
+                                            className="inline-flex items-center gap-2 rounded-md bg-[#000080] px-5 py-2 text-sm font-bold text-white hover:bg-blue-900 disabled:opacity-50 shadow-xs transition"
+                                            title="บันทึกทับรูปเดิม ไม่เพิ่มไฟล์ขยะในคลังสื่อ"
+                                        >
+                                            <Save className="h-4 w-4" />
+                                            {isSaving ? 'กำลังบันทึก...' : 'บันทึกทับรูปเดิม'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => saveDesign({ overwrite: false })}
+                                        disabled={isSaving || isUploading}
+                                        className="inline-flex items-center gap-2 rounded-md bg-[#000080] px-5 py-2 text-sm font-bold text-white hover:bg-blue-900 disabled:opacity-50 transition"
+                                    >
+                                        <Save className="h-4 w-4" />
+                                        {isSaving ? 'กำลังบันทึก...' : 'บันทึกรูป'}
+                                    </button>
+                                )}
                             </div>
                         </footer>
                     </main>
