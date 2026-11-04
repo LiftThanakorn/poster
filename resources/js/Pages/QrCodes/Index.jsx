@@ -21,7 +21,7 @@ import QrCodeAnalyticsModal from '@/Components/QrCode/QrCodeAnalyticsModal';
 import QrCodeDownloadModal from '@/Components/QrCode/QrCodeDownloadModal';
 import { isLocalhostUrl } from '@/Utils/qrcode';
 
-export default function Index({ auth, qrCodes, filters, metrics }) {
+export default function Index({ auth, qrCodes, filters, metrics, mediaList = [] }) {
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
     const [copiedCode, setCopiedCode] = useState(null);
@@ -373,7 +373,8 @@ export default function Index({ auth, qrCodes, filters, metrics }) {
                 open={formModalOpen}
                 onClose={() => setFormModalOpen(false)}
                 qrCode={editingQr}
-                onSaved={() => router.reload({ only: ['qrCodes', 'metrics'] })}
+                mediaList={mediaList}
+                onSaved={() => router.reload({ only: ['qrCodes', 'metrics', 'mediaList'] })}
             />
 
             <QrCodeAnalyticsModal

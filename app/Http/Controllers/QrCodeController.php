@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreQrCodeRequest;
 use App\Http\Requests\UpdateQrCodeRequest;
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Models\QrCode;
 use App\Models\Template;
 use App\Services\QrCodeGeneratorService;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -59,8 +61,22 @@ class QrCodeController extends Controller
             ->where('scanned_at', '>=', now()->subDays(7))
             ->count();
 
+        $mediaList = PostMedia::query()
+            ->select(['id', 'file_path', 'original_name', 'mime_type', 'file_size'])
+            ->where('mime_type', 'like', 'image/%')
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'original_name' => $m->original_name,
+                'file_path' => $m->file_path,
+                'url' => Storage::disk('public')->url($m->file_path),
+            ]);
+
         return Inertia::render('QrCodes/Index', [
             'qrCodes' => $qrCodes,
+            'mediaList' => $mediaList,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -245,6 +261,16 @@ class QrCodeController extends Controller
         $download = $request->boolean('download');
         $filename = "qrcode-{$qrCode->code}.{$format}";
 
+        // Resolve logo path from media library if provided
+        $logoPath = null;
+        $logoMediaId = $styling['logoMediaId'] ?? null;
+        if ($logoMediaId) {
+            $media = PostMedia::query()->find($logoMediaId);
+            if ($media && Storage::disk('public')->exists($media->file_path)) {
+                $logoPath = Storage::disk('public')->path($media->file_path);
+            }
+        }
+
         if ($format === 'png') {
             $content = $this->qrGenerator->generatePng(
                 $qrCode->scan_url,
@@ -254,6 +280,7 @@ class QrCodeController extends Controller
                 $dark,
                 $light,
                 $transparent,
+                $logoPath,
             );
             $mime = 'image/png';
         } else {
@@ -265,6 +292,7 @@ class QrCodeController extends Controller
                 $dark,
                 $light,
                 $transparent,
+                $logoPath,
             );
             $mime = 'image/svg+xml';
             $format = 'svg';

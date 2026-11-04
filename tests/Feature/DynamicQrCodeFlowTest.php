@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Models\QrCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DynamicQrCodeFlowTest extends TestCase
@@ -158,5 +161,51 @@ class DynamicQrCodeFlowTest extends TestCase
         $response = $this->actingAs($user)->deleteJson(route('qr-codes.destroy', $qr));
         $response->assertOk();
         $this->assertDatabaseMissing('qr_codes', ['id' => $qr->id]);
+    }
+
+    public function test_can_create_and_render_qr_with_logo(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $image = UploadedFile::fake()->image('logo.png', 100, 100);
+        $path = $image->store('media', 'public');
+
+        $media = PostMedia::query()->create([
+            'file_path' => $path,
+            'original_name' => 'logo.png',
+            'mime_type' => 'image/png',
+            'file_size' => 1024,
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('qr-codes.store'), [
+            'title' => 'QR with Logo',
+            'code' => 'branded-qr',
+            'target_url' => 'https://example.com/branded',
+            'is_active' => true,
+            'styling' => [
+                'logoMediaId' => $media->id,
+                'logoUrl' => $media->url,
+                'errorCorrection' => 'H',
+            ],
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('qr_codes', [
+            'code' => 'branded-qr',
+        ]);
+
+        $qr = QrCode::where('code', 'branded-qr')->first();
+        $this->assertSame($media->id, $qr->styling['logoMediaId']);
+
+        // Test SVG rendering with logo
+        $svgResponse = $this->get(route('qr.image', ['code' => 'branded-qr', 'format' => 'svg']));
+        $svgResponse->assertOk();
+        $this->assertStringContainsString('<svg', $svgResponse->getContent());
+
+        // Test PNG rendering with logo
+        $pngResponse = $this->get(route('qr.image', ['code' => 'branded-qr', 'format' => 'png']));
+        $pngResponse->assertOk();
+        $this->assertStringStartsWith("\x89PNG", $pngResponse->getContent());
     }
 }

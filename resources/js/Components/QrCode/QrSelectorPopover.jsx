@@ -54,10 +54,11 @@ export default function QrSelectorPopover({
         const dataUrl = await generateQrDataUrl(qr.scan_url, {
             size: 800,
             margin: Number(styling.margin) || 2,
-            errorCorrectionLevel: styling.errorCorrection || 'H',
+            errorCorrectionLevel: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
             darkColor: styling.darkColor || '#000000',
             lightColor: styling.lightColor || '#ffffff',
             transparentBg: styling.transparentBg ?? false,
+            logoSrc: styling.logoUrl || null,
         });
 
         onSelectQr({
@@ -72,7 +73,9 @@ export default function QrSelectorPopover({
                 lightColor: styling.lightColor || '#ffffff',
                 transparentBg: styling.transparentBg ?? false,
                 margin: Number(styling.margin) || 2,
-                errorCorrection: styling.errorCorrection || 'H',
+                errorCorrection: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
+                logoMediaId: styling.logoMediaId || null,
+                logoUrl: styling.logoUrl || null,
             },
         });
         onClose();

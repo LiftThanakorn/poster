@@ -29,6 +29,8 @@ class StoreQrCodeRequest extends FormRequest
             'styling.transparentBg' => 'nullable|boolean',
             'styling.margin' => 'nullable|integer|min:0|max:50',
             'styling.errorCorrection' => 'nullable|string|in:L,M,Q,H',
+            'styling.logoMediaId' => 'nullable|integer|exists:post_media,id',
+            'styling.logoUrl' => 'nullable|string|max:4096',
         ];
     }
 

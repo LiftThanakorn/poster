@@ -5,6 +5,7 @@ namespace App\Services;
 use Endroid\QrCode\Color\Color;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\Logo\Logo;
 use Endroid\QrCode\QrCode as EndroidQrCode;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
@@ -23,10 +24,14 @@ class QrCodeGeneratorService
         string $darkHex = '#000000',
         string $lightHex = '#ffffff',
         bool $transparentBg = false,
+        ?string $logoPath = null,
+        ?int $logoWidth = null,
     ): string {
-        $qrCode = $this->buildQrCode($content, $size, $margin, $errorCorrection, $darkHex, $lightHex, $transparentBg);
+        $ecc = $logoPath ? 'H' : $errorCorrection;
+        $qrCode = $this->buildQrCode($content, $size, $margin, $ecc, $darkHex, $lightHex, $transparentBg);
+        $logo = $this->buildLogo($logoPath, $logoWidth ?? (int) ($size * 0.22));
 
-        return (new SvgWriter)->write($qrCode)->getString();
+        return (new SvgWriter)->write($qrCode, $logo)->getString();
     }
 
     /**
@@ -40,10 +45,27 @@ class QrCodeGeneratorService
         string $darkHex = '#000000',
         string $lightHex = '#ffffff',
         bool $transparentBg = false,
+        ?string $logoPath = null,
+        ?int $logoWidth = null,
     ): string {
-        $qrCode = $this->buildQrCode($content, $size, $margin, $errorCorrection, $darkHex, $lightHex, $transparentBg);
+        $ecc = $logoPath ? 'H' : $errorCorrection;
+        $qrCode = $this->buildQrCode($content, $size, $margin, $ecc, $darkHex, $lightHex, $transparentBg);
+        $logo = $this->buildLogo($logoPath, $logoWidth ?? (int) ($size * 0.22));
 
-        return (new PngWriter)->write($qrCode)->getString();
+        return (new PngWriter)->write($qrCode, $logo)->getString();
+    }
+
+    private function buildLogo(?string $logoPath, int $targetWidth): ?Logo
+    {
+        if (! $logoPath || ! file_exists($logoPath)) {
+            return null;
+        }
+
+        return new Logo(
+            path: $logoPath,
+            resizeToWidth: max(20, $targetWidth),
+            punchoutBackground: true
+        );
     }
 
     private function buildQrCode(

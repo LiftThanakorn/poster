@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, QrCode as QrIcon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ExternalLink, QrCode as QrIcon, Image as ImageIcon, Upload, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { generateQrDataUrl, isLocalhostUrl } from '@/Utils/qrcode';
+import { resolveStorageUrl } from '@/Utils/media';
 
 export default function QrCodeFormModal({
     open,
     onClose,
     qrCode = null, // null for create, object for edit
+    mediaList = [],
     onSaved,
 }) {
     const isEdit = !!qrCode;
@@ -19,6 +21,11 @@ export default function QrCodeFormModal({
     const [transparentBg, setTransparentBg] = useState(false);
     const [margin, setMargin] = useState(2);
     const [errorCorrection, setErrorCorrection] = useState('H');
+
+    // Logo state
+    const [selectedLogo, setSelectedLogo] = useState(null); // { id, url, file_path }
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+    const logoFileInputRef = useRef(null);
 
     const [previewUrl, setPreviewUrl] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -37,6 +44,14 @@ export default function QrCodeFormModal({
             setTransparentBg(styling.transparentBg ?? false);
             setMargin(styling.margin ?? 2);
             setErrorCorrection(styling.errorCorrection || 'H');
+            if (styling.logoUrl || styling.logoMediaId) {
+                setSelectedLogo({
+                    id: styling.logoMediaId || null,
+                    url: styling.logoUrl || '',
+                });
+            } else {
+                setSelectedLogo(null);
+            }
         } else {
             setTitle('');
             setCode('');
@@ -47,11 +62,12 @@ export default function QrCodeFormModal({
             setTransparentBg(false);
             setMargin(2);
             setErrorCorrection('H');
+            setSelectedLogo(null);
         }
         setErrors({});
     }, [open, qrCode]);
 
-    // Live preview generator
+    // Live preview generator with logo support
     useEffect(() => {
         if (!open) return;
         let isMounted = true;
@@ -61,20 +77,49 @@ export default function QrCodeFormModal({
             : `https://domain/qr/${testCode}`;
 
         generateQrDataUrl(dummyUrl, {
-            size: 300,
+            size: 400,
             margin: Number(margin) || 2,
-            errorCorrectionLevel: errorCorrection,
+            errorCorrectionLevel: selectedLogo ? 'H' : errorCorrection,
             darkColor,
             lightColor,
             transparentBg,
+            logoSrc: selectedLogo?.url || null,
         }).then((dataUrl) => {
             if (isMounted) setPreviewUrl(dataUrl);
         }).catch(() => {});
 
         return () => { isMounted = false; };
-    }, [open, code, darkColor, lightColor, transparentBg, margin, errorCorrection]);
+    }, [open, code, darkColor, lightColor, transparentBg, margin, errorCorrection, selectedLogo]);
 
     if (!open) return null;
+
+    const handleUploadLogoFile = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        setIsUploadingLogo(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('is_featured', '0');
+
+            const res = await axios.post(route('media.store'), formData, {
+                headers: { Accept: 'application/json' },
+            });
+            const media = res.data.media;
+            const fullUrl = resolveStorageUrl(media);
+            setSelectedLogo({
+                id: media.id,
+                url: fullUrl,
+                file_path: media.file_path,
+            });
+        } catch {
+            alert('ไม่สามารถอัปโหลดโลโก้ได้ กรุณาลองใหม่อีกครั้ง');
+        } finally {
+            setIsUploadingLogo(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -91,7 +136,9 @@ export default function QrCodeFormModal({
                 lightColor,
                 transparentBg,
                 margin: Number(margin) || 2,
-                errorCorrection,
+                errorCorrection: selectedLogo ? 'H' : errorCorrection,
+                logoMediaId: selectedLogo?.id || null,
+                logoUrl: selectedLogo?.url || null,
             },
         };
 
@@ -130,7 +177,7 @@ export default function QrCodeFormModal({
                                 {isEdit ? 'แก้ไข Dynamic QR Code' : 'สร้าง Dynamic QR Code ใหม่'}
                             </h3>
                             <p className="text-xs text-slate-500">
-                                {isEdit ? 'แก้ไขลิงก์ปลายทาง หรือปรับแต่งดีไซน์' : 'สร้างรหัสสั้นเพื่อนำไปใส่ในโปสเตอร์และปรับเปลี่ยนลิงก์ได้ตลอดเวลา'}
+                                {isEdit ? 'แก้ไขลิงก์ปลายทาง หรือปรับแต่งดีไซน์และโลโก้' : 'สร้างรหัสสั้น ใส่โลโก้ตรงกลาง และปรับเปลี่ยนลิงก์ได้ตลอดเวลา'}
                             </p>
                         </div>
                     </div>
@@ -207,9 +254,76 @@ export default function QrCodeFormModal({
                                 {errors.code && <p className="mt-1 text-xs text-red-600">{errors.code[0]}</p>}
                             </div>
 
+                            {/* Logo Setting Section */}
+                            <div className="border-t border-slate-100 pt-3">
+                                <label className="block text-xs font-semibold text-slate-700 mb-2">
+                                    โลโก้ตรงกลาง (Center Logo)
+                                </label>
+                                {selectedLogo ? (
+                                    <div className="flex items-center justify-between p-2.5 rounded-xl border border-blue-200 bg-blue-50/50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-lg border border-slate-200 bg-white p-1 flex items-center justify-center shadow-xs">
+                                                <img src={selectedLogo.url} alt="Logo" className="h-full w-full object-contain" />
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-semibold text-slate-800">ใส่โลโก้เรียบร้อยแล้ว</div>
+                                                <div className="text-[10px] text-slate-500">ระบบจะใช้ Error Correction ระดับสูง (H) เพื่อให้สแกนติดง่าย</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedLogo(null)}
+                                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
+                                            title="ลบโลโก้ออก"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => logoFileInputRef.current?.click()}
+                                                disabled={isUploadingLogo}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-xs"
+                                            >
+                                                <Upload className="h-3.5 w-3.5" />
+                                                <span>{isUploadingLogo ? 'กำลังอัปโหลด...' : 'อัปโหลดโลโก้ใหม่'}</span>
+                                            </button>
+                                            <input
+                                                ref={logoFileInputRef}
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                                onChange={handleUploadLogoFile}
+                                                className="hidden"
+                                            />
+                                        </div>
+
+                                        {mediaList.length > 0 && (
+                                            <div>
+                                                <span className="text-[11px] text-slate-400 block mb-1">หรือเลือกจากคลังรูปภาพ:</span>
+                                                <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
+                                                    {mediaList.slice(0, 8).map((m) => (
+                                                        <img
+                                                            key={m.id}
+                                                            src={m.url}
+                                                            alt=""
+                                                            onClick={() => setSelectedLogo({ id: m.id, url: m.url, file_path: m.file_path })}
+                                                            className="h-9 w-9 rounded-md border border-slate-200 object-cover cursor-pointer hover:border-blue-500 hover:scale-105 transition shrink-0 bg-white"
+                                                            title={m.original_name}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Styling row */}
                             <div className="border-t border-slate-100 pt-3">
-                                <span className="block text-xs font-semibold text-slate-700 mb-2">ปรับแต่งการแสดงผล</span>
+                                <span className="block text-xs font-semibold text-slate-700 mb-2">ปรับแต่งสีและพื้นหลัง</span>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-[11px] text-slate-500 block mb-1">สีตัวโค้ด</label>
@@ -278,6 +392,11 @@ export default function QrCodeFormModal({
                             <span className="text-[11px] font-mono text-slate-500 mt-2 text-center break-all">
                                 /qr/{code.trim() || 'auto'}
                             </span>
+                            {selectedLogo && (
+                                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-2 font-medium">
+                                    ✓ บันทึกโลโก้ลง QR นี้
+                                </span>
+                            )}
                         </div>
                     </div>
 

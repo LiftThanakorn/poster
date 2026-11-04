@@ -313,10 +313,11 @@ export default function ImageEditorModal({
                 const dataUrl = await generateQrDataUrl(el.scanUrl, {
                     size: 800,
                     margin: Number(styling.margin) || 2,
-                    errorCorrectionLevel: styling.errorCorrection || 'H',
+                    errorCorrectionLevel: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
                     darkColor: styling.darkColor || '#000000',
                     lightColor: styling.lightColor || '#ffffff',
                     transparentBg: styling.transparentBg ?? false,
+                    logoSrc: styling.logoUrl || null,
                 });
                 return { id: el.id, src: dataUrl };
             })
@@ -363,10 +364,11 @@ export default function ImageEditorModal({
             const dataUrl = await generateQrDataUrl(selectedElement.scanUrl, {
                 size: 800,
                 margin: Number(nextStyling.margin) || 2,
-                errorCorrectionLevel: nextStyling.errorCorrection || 'H',
+                errorCorrectionLevel: nextStyling.logoUrl ? 'H' : (nextStyling.errorCorrection || 'H'),
                 darkColor: nextStyling.darkColor || '#000000',
                 lightColor: nextStyling.lightColor || '#ffffff',
                 transparentBg: nextStyling.transparentBg ?? false,
+                logoSrc: nextStyling.logoUrl || null,
             });
 
             updateElement({
@@ -829,6 +831,22 @@ export default function ImageEditorModal({
                                                 </label>
                                             </div>
                                         </div>
+
+                                        {selectedElement.styling?.logoUrl && (
+                                            <div className="flex items-center justify-between rounded-lg bg-indigo-50/60 p-2 border border-indigo-100">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <img
+                                                        src={selectedElement.styling.logoUrl}
+                                                        alt="QR Logo"
+                                                        className="h-7 w-7 rounded object-contain bg-white border border-slate-200 p-0.5 shrink-0"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <div className="text-[11px] font-semibold text-indigo-900 truncate">มีโลโก้ตรงกลาง</div>
+                                                        <div className="text-[10px] text-indigo-600">บันทึกอยู่ใน Dynamic QR</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <button
                                             type="button"
