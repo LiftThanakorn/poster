@@ -84,21 +84,40 @@ class QrCode extends Model
      */
     public static function resolvePostQrPlaceholders(Post $post, array $replacements): void
     {
-        $elements = $post->image_editor_data['elements'] ?? [];
-        if (! is_array($elements) || empty($replacements)) {
+        if (empty($replacements)) {
             return;
         }
 
-        foreach ($elements as $el) {
-            if (($el['type'] ?? '') === 'qr' && ! empty($el['qrCodeId'])) {
-                /** @var self|null $qr */
-                $qr = self::query()->find($el['qrCodeId']);
-                if ($qr && isset($replacements[$qr->target_url]) && $replacements[$qr->target_url] !== '') {
-                    $qr->update([
-                        'target_url' => $replacements[$qr->target_url],
-                    ]);
+        $elements = $post->image_editor_data['elements'] ?? [];
+        if (is_array($elements)) {
+            foreach ($elements as $el) {
+                if (($el['type'] ?? '') === 'qr' && ! empty($el['qrCodeId'])) {
+                    /** @var self|null $qr */
+                    $qr = self::query()->find($el['qrCodeId']);
+                    if ($qr && isset($replacements[$qr->target_url]) && $replacements[$qr->target_url] !== '') {
+                        $qr->update([
+                            'target_url' => $replacements[$qr->target_url],
+                        ]);
+                    }
                 }
             }
+        }
+
+        // Also resolve any QR codes whose placeholder matches and title matches post title
+        if (! empty($post->title)) {
+            self::query()
+                ->whereIn('target_url', array_keys($replacements))
+                ->where(function ($query) use ($post): void {
+                    $query->where('title', 'like', "%{$post->title}%")
+                        ->orWhere('title', $post->title);
+                })
+                ->each(function (self $qr) use ($replacements): void {
+                    if (isset($replacements[$qr->target_url]) && $replacements[$qr->target_url] !== '') {
+                        $qr->update([
+                            'target_url' => $replacements[$qr->target_url],
+                        ]);
+                    }
+                });
         }
     }
 

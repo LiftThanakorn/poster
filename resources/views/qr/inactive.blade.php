@@ -77,15 +77,27 @@
 </head>
 <body>
     <div class="card">
-        <div class="icon-box">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-        </div>
-        <h1>ลิงก์ QR Code นี้ไม่พร้อมใช้งาน</h1>
-        <p>
-            ขออภัย ลิงก์ปลายทางของ QR Code นี้ถูกระงับการใช้งานชั่วคราว หรือหมดอายุระยะเวลาการประชาสัมพันธ์แล้ว กรุณาติดต่อหน่วยงานต้นสังกัดเพื่อขอรับข้อมูลล่าสุด
-        </p>
+        @if ($isPending ?? false)
+            <div class="icon-box" style="background: #eef2ff; color: #4338ca;">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h1>เอกสารกำลังอยู่ระหว่างการประมวลผล</h1>
+            <p>
+                ระบบกำลังเตรียมไฟล์และซิงก์ข้อมูลไปยัง Google Drive หรือเว็บไซต์ปลายทาง กรุณาลองสแกนใหม่อีกครั้งใน 1 - 2 นาที
+            </p>
+        @else
+            <div class="icon-box">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <h1>ลิงก์ QR Code นี้ไม่พร้อมใช้งาน</h1>
+            <p>
+                ขออภัย ลิงก์ปลายทางของ QR Code นี้ถูกระงับการใช้งานชั่วคราว หรือหมดอายุระยะเวลาการประชาสัมพันธ์แล้ว กรุณาติดต่อหน่วยงานต้นสังกัดเพื่อขอรับข้อมูลล่าสุด
+            </p>
+        @endif
         @if (!empty($code))
             <div class="code-pill">รหัส: {{ $code }}</div>
         @endif
