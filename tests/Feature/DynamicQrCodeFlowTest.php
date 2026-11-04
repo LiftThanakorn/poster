@@ -208,4 +208,60 @@ class DynamicQrCodeFlowTest extends TestCase
         $pngResponse->assertOk();
         $this->assertStringStartsWith("\x89PNG", $pngResponse->getContent());
     }
+
+    public function test_can_create_qr_with_placeholder_and_resolve_when_synced(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Can create QR with {drive_url}
+        $response = $this->actingAs($user)->postJson(route('qr-codes.store'), [
+            'title' => 'Pending Drive QR',
+            'code' => 'pending-drive',
+            'target_url' => '{drive_url}',
+            'is_active' => true,
+        ]);
+        $response->assertStatus(201);
+
+        $qr = QrCode::where('code', 'pending-drive')->first();
+        $this->assertNotNull($qr);
+        $this->assertFalse($qr->isRedirectable());
+
+        // Redirect returns inactive 410 before resolved
+        $redirectResponse = $this->get(route('qr.redirect', ['code' => 'pending-drive']));
+        $redirectResponse->assertStatus(410);
+
+        // 2. Attach QR into post's image_editor_data
+        $post = Post::query()->create([
+            'title' => 'Announcement Post',
+            'slug' => 'announcement-post',
+            'status' => 'draft',
+            'author_id' => $user->id,
+            'image_editor_data' => [
+                'canvasWidth' => 1080,
+                'canvasHeight' => 1080,
+                'elements' => [
+                    [
+                        'id' => 'qr-el-1',
+                        'type' => 'qr',
+                        'qrCodeId' => $qr->id,
+                        'code' => $qr->code,
+                    ],
+                ],
+            ],
+        ]);
+
+        // 3. Resolve placeholders
+        QrCode::resolvePostQrPlaceholders($post, [
+            '{drive_url}' => 'https://drive.google.com/file/d/12345/view?usp=sharing',
+        ]);
+
+        $qr->refresh();
+        $this->assertSame('https://drive.google.com/file/d/12345/view?usp=sharing', $qr->target_url);
+        $this->assertTrue($qr->isRedirectable());
+
+        // Now scanning redirects to Google Drive
+        $scanResponse = $this->get(route('qr.redirect', ['code' => 'pending-drive']));
+        $scanResponse->assertStatus(302);
+        $scanResponse->assertRedirect('https://drive.google.com/file/d/12345/view?usp=sharing');
+    }
 }

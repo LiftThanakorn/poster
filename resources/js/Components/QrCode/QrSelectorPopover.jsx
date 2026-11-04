@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Plus, QrCode as QrIcon, Check, ExternalLink, Loader2 } from 'lucide-react';
+import { X, Search, Plus, QrCode as QrIcon, Check, ExternalLink, Loader2, Sparkles, Link as LinkIcon } from 'lucide-react';
 import axios from 'axios';
 import { generateQrDataUrl } from '@/Utils/qrcode';
+import { GoogleDriveIcon, WordPressIcon } from '@/Components/ChannelIcons';
 
 export default function QrSelectorPopover({
     open,
@@ -9,6 +10,7 @@ export default function QrSelectorPopover({
     onSelectQr,
     initialTargetUrl = '',
     initialTitle = '',
+    suggestedUrls = [],
 }) {
     const [activeTab, setActiveTab] = useState('library'); // 'library' | 'create'
     const [qrList, setQrList] = useState([]);
@@ -48,6 +50,13 @@ export default function QrSelectorPopover({
     };
 
     if (!open) return null;
+
+    const handleSelectSuggested = (item) => {
+        setTargetUrl(item.url);
+        if (!title.trim() || title === 'Dynamic QR Code') {
+            setTitle(item.title || item.label || 'Dynamic QR Code');
+        }
+    };
 
     const handleSelectExisting = async (qr) => {
         const styling = qr.styling || {};
@@ -247,6 +256,64 @@ export default function QrSelectorPopover({
                                 </div>
                             )}
 
+                            {suggestedUrls && suggestedUrls.length > 0 && (
+                                <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
+                                            <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                                            ดึงลิงก์จากโพสต์นี้ (Quick Fill)
+                                        </span>
+                                        <span className="text-[10px] text-indigo-500 font-medium">คลิกเพื่อใส่ข้อมูล</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
+                                        {suggestedUrls.map((item) => {
+                                            const isSelected = targetUrl === item.url;
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    onClick={() => handleSelectSuggested(item)}
+                                                    className={`flex items-center justify-between p-2 rounded-lg border text-left transition ${
+                                                        isSelected
+                                                            ? 'bg-indigo-100/90 border-indigo-300 ring-1 ring-indigo-400 text-indigo-950'
+                                                            : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-slate-700'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        {item.type === 'google_drive' ? (
+                                                            <div className="h-6 w-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/60">
+                                                                <GoogleDriveIcon className="h-3.5 w-3.5" />
+                                                            </div>
+                                                        ) : item.type === 'wordpress' || item.type === 'wordpress_site' ? (
+                                                            <div className="h-6 w-6 rounded-md bg-blue-50 text-[#21759B] flex items-center justify-center shrink-0 border border-blue-200/60">
+                                                                <WordPressIcon className="h-3.5 w-3.5" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="h-6 w-6 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
+                                                                <LinkIcon className="h-3.5 w-3.5" />
+                                                            </div>
+                                                        )}
+                                                        <div className="min-w-0">
+                                                            <p className="text-[11px] font-semibold truncate leading-tight text-slate-900">{item.label}</p>
+                                                            <p className="text-[10px] text-slate-500 truncate font-mono mt-0.5">{item.url}</p>
+                                                        </div>
+                                                    </div>
+                                                    {isSelected ? (
+                                                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-700 shrink-0 ml-1.5 bg-indigo-200/70 px-1.5 py-0.5 rounded">
+                                                            <Check className="h-3 w-3" /> เลือกอยู่
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] font-semibold text-indigo-600 shrink-0 ml-1.5 hover:underline">
+                                                            ดึงลิงก์นี้
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                                     ชื่อเรียก QR Code <span className="text-red-500">*</span>
@@ -266,7 +333,7 @@ export default function QrSelectorPopover({
                                     URL ปลายทาง (Target URL) <span className="text-red-500">*</span>
                                 </label>
                                 <input
-                                    type="url"
+                                    type="text"
                                     value={targetUrl}
                                     onChange={(e) => setTargetUrl(e.target.value)}
                                     placeholder="https://drive.google.com/..."

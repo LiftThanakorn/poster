@@ -214,6 +214,8 @@ export default function ImageEditorModal({
     mediaList = [],
     initialImageUrl = null,
     initialData = null,
+    suggestedUrls = [],
+    defaultQrTitle = '',
     onSave,
     onMediaUploaded,
 }) {
@@ -1209,6 +1211,8 @@ export default function ImageEditorModal({
                 open={isQrPopoverOpen}
                 onClose={() => setIsQrPopoverOpen(false)}
                 onSelectQr={addQrElement}
+                suggestedUrls={suggestedUrls}
+                initialTitle={defaultQrTitle}
             />
         </div>
     );

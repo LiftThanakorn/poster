@@ -27,6 +27,11 @@ class SafeRedirectUrl implements ValidationRule
             return;
         }
 
+        $trimmed = trim($value);
+        if (in_array($trimmed, ['{drive_url}', '{{drive_url}}', '{wordpress_url}', '{{wordpress_url}}'], true)) {
+            return;
+        }
+
         $filtered = filter_var($value, FILTER_VALIDATE_URL);
         if ($filtered === false) {
             $fail('รูปแบบ URL ปลายทางไม่ถูกต้อง');

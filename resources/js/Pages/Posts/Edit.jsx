@@ -2,7 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import PostForm from '@/Components/PostForm';
 
-export default function Edit({ auth, post, templates, mediaList, folders = [], categories = [], wpCategories, googleDriveConfig = {} }) {
+export default function Edit({ auth, post, templates, mediaList, folders = [], categories = [], wpCategories, googleDriveConfig = {}, wordpressConfig = {} }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -45,6 +45,7 @@ export default function Edit({ auth, post, templates, mediaList, folders = [], c
                         categories={categories}
                         wpCategories={wpCategories}
                         googleDriveConfig={googleDriveConfig}
+                        wordpressConfig={wordpressConfig}
                         submitUrl={route('posts.update', post.id)}
                         submitMethod="put"
                         postId={post.id}

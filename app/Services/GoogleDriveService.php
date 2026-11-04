@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\QrCode;
 use App\Support\SecretSanitizer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -559,6 +561,14 @@ class GoogleDriveService
                 'drive_synced_at' => now(),
                 'drive_error_message' => null,
             ]);
+
+            $relatedPosts = Post::query()->where('pdf_media_id', $media->id)->get();
+            foreach ($relatedPosts as $relatedPost) {
+                QrCode::resolvePostQrPlaceholders($relatedPost, [
+                    '{drive_url}' => $webViewLink,
+                    '{{drive_url}}' => $webViewLink,
+                ]);
+            }
 
             return $media->fresh();
         });

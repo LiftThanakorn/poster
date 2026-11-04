@@ -7,6 +7,7 @@ use App\Models\PostMedia;
 use App\Models\PublishAttempt;
 use App\Models\PublishEvent;
 use App\Models\PublishTarget;
+use App\Models\QrCode;
 use App\Services\GoogleDriveService;
 use App\Support\SecretSanitizer;
 use Illuminate\Support\Facades\Log;
@@ -154,6 +155,14 @@ class PublishingService
                         : 'เผยแพร่โพสต์ไปยัง Facebook สำเร็จ',
                     ['external_url' => $target->fresh()->external_url],
                 );
+
+                if ($target->channel === 'wordpress' && ! empty($target->fresh()->external_url)) {
+                    $freshExternalUrl = $target->fresh()->external_url;
+                    QrCode::resolvePostQrPlaceholders($post, [
+                        '{wordpress_url}' => $freshExternalUrl,
+                        '{{wordpress_url}}' => $freshExternalUrl,
+                    ]);
+                }
 
                 $this->updatePostStatus($post);
 

@@ -2,7 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import PostForm from '@/Components/PostForm';
 
-export default function Create({ auth, templates, mediaList, folders = [], categories = [], wpCategories, googleDriveConfig = {}, initialPdfMediaId = null }) {
+export default function Create({ auth, templates, mediaList, folders = [], categories = [], wpCategories, googleDriveConfig = {}, wordpressConfig = {}, initialPdfMediaId = null }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -19,6 +19,7 @@ export default function Create({ auth, templates, mediaList, folders = [], categ
                         categories={categories}
                         wpCategories={wpCategories}
                         googleDriveConfig={googleDriveConfig}
+                        wordpressConfig={wordpressConfig}
                         initialPdfMediaId={initialPdfMediaId}
                         submitUrl={route('posts.store')}
                         submitMethod="post"

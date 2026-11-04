@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -21,6 +21,7 @@ export default function PostForm({
     categories = [],
     wpCategories, 
     googleDriveConfig = {},
+    wordpressConfig = {},
     initialPdfMediaId = null,
     submitUrl, 
     submitMethod = 'post',
@@ -672,6 +673,120 @@ export default function PostForm({
     const hasPublishedFacebookTarget = mode === 'edit'
         && isFbSelected
         && Boolean(initialData?.facebook_target_published);
+
+    // Context URLs available from this post for QR code quick fill
+    const contextSuggestedUrls = useMemo(() => {
+        const urls = [];
+
+        // 1. Google Drive PDF from this post
+        if (selectedPdfMedia?.drive_web_view_link) {
+            urls.push({
+                id: 'post_pdf_drive',
+                type: 'google_drive',
+                label: `Google Drive: ${selectedPdfName || 'เอกสารประกาศ PDF'}`,
+                title: data.title ? `${data.title} (เอกสาร)` : (selectedPdfName || 'เอกสารประกาศ'),
+                url: selectedPdfMedia.drive_web_view_link,
+                source: 'ไฟล์ PDF ในโพสต์นี้ (Google Drive)',
+            });
+        } else if (data.pdf_file || data.pdf_media_id) {
+            urls.push({
+                id: 'post_pdf_drive_pending',
+                type: 'google_drive',
+                label: `Google Drive: ${selectedPdfName || 'ไฟล์ประกาศ PDF'} (รอ Sync อัตโนมัติ)`,
+                title: data.title ? `${data.title} (เอกสาร)` : (selectedPdfName || 'เอกสารประกาศ'),
+                url: '{drive_url}',
+                source: 'รออัปเดตเป็น Google Drive อัตโนมัติเมื่อบันทึกโพสต์',
+            });
+            if (selectedPdfUrl) {
+                urls.push({
+                    id: 'post_pdf_storage',
+                    type: 'google_drive',
+                    label: `เอกสาร PDF (ในระบบ): ${selectedPdfName || 'ไฟล์แนบ'}`,
+                    title: data.title ? `${data.title} (เอกสาร)` : (selectedPdfName || 'เอกสารประกาศ'),
+                    url: selectedPdfUrl.startsWith('http') ? selectedPdfUrl : `${window.location.origin}${selectedPdfUrl}`,
+                    source: 'ไฟล์ PDF ในระบบ',
+                });
+            }
+        }
+
+        // 2. WordPress Target URL or Placeholder
+        if (wordpressConfig?.target_url) {
+            urls.push({
+                id: 'post_wp_published',
+                type: 'wordpress',
+                label: 'หน้าบทความ WordPress ของโพสต์นี้',
+                title: data.title || 'หน้าบทความข่าว WordPress',
+                url: wordpressConfig.target_url,
+                source: 'หน้าบทความ WordPress',
+            });
+        } else if (isWpSelected) {
+            urls.push({
+                id: 'post_wp_pending',
+                type: 'wordpress',
+                label: 'หน้าบทความ WordPress (รอสร้างเมื่อเผยแพร่)',
+                title: data.title || 'หน้าบทความข่าว WordPress',
+                url: '{wordpress_url}',
+                source: 'รออัปเดตเป็นลิงก์บทความจริงเมื่อเผยแพร่',
+            });
+        }
+
+        if (wordpressConfig?.url) {
+            urls.push({
+                id: 'post_wp_site',
+                type: 'wordpress_site',
+                label: 'เว็บไซต์ WordPress หลัก',
+                title: 'เว็บไซต์หน่วยงาน',
+                url: wordpressConfig.url,
+                source: 'เว็บไซต์ WordPress',
+            });
+        }
+
+        // 3. Action Buttons from this post
+        if (Array.isArray(data.action_buttons)) {
+            data.action_buttons.forEach((btn, index) => {
+                const bUrl = (btn?.url || '').trim();
+                const bLabel = (btn?.label || '').trim();
+                if (bUrl && (bUrl.startsWith('http://') || bUrl.startsWith('https://') || bUrl.startsWith('{'))) {
+                    urls.push({
+                        id: `action_btn_${index}`,
+                        type: 'action_button',
+                        label: bLabel ? `ปุ่ม: ${bLabel}` : `ปุ่มดำเนินการที่ ${index + 1}`,
+                        title: bLabel || data.title || 'ลิงก์ดำเนินการ',
+                        url: bUrl,
+                        source: 'ปุ่มดำเนินการ (Action Button)',
+                    });
+                }
+            });
+        }
+
+        // 4. Other media with Google Drive links in library
+        const otherDriveMedia = (localMedia || [])
+            .filter((m) => m.id !== selectedPdfMedia?.id && m.drive_web_view_link)
+            .slice(0, 3);
+        otherDriveMedia.forEach((m) => {
+            urls.push({
+                id: `media_drive_${m.id}`,
+                type: 'google_drive',
+                label: `Google Drive: ${m.drive_file_name || m.original_name || 'ไฟล์ในคลัง'}`,
+                title: m.drive_file_name || m.original_name || 'ไฟล์ในคลัง',
+                url: m.drive_web_view_link,
+                source: 'คลังสื่อ (Media Library)',
+            });
+        });
+
+        return urls;
+    }, [
+        selectedPdfMedia,
+        selectedPdfName,
+        selectedPdfUrl,
+        data.pdf_file,
+        data.pdf_media_id,
+        data.title,
+        data.action_buttons,
+        wordpressConfig,
+        isWpSelected,
+        localMedia,
+    ]);
 
     const imageChanged = mode === 'edit' && (
         Boolean(data.file)
@@ -1522,6 +1637,8 @@ export default function PostForm({
                         mediaList={localMedia}
                         initialImageUrl={selectedImageUrl}
                         initialData={data.image_editor_data}
+                        suggestedUrls={contextSuggestedUrls}
+                        defaultQrTitle={data.title}
                         onMediaUploaded={rememberMedia}
                         onSave={saveEditedImage}
                     />

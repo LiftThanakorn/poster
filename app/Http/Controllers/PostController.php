@@ -11,6 +11,7 @@ use App\Models\MediaFolder;
 use App\Models\Post;
 use App\Models\PostMedia;
 use App\Models\PublishTarget;
+use App\Models\QrCode;
 use App\Models\Template;
 use App\Services\GoogleDriveFilenameBuilder;
 use App\Services\IntegrationSettingsService;
@@ -56,6 +57,7 @@ class PostController extends Controller
     public function create(Request $request)
     {
         $initialPdfMediaId = $request->query('pdf_media_id') ? (int) $request->query('pdf_media_id') : null;
+        $wordpress = app(IntegrationSettingsService::class)->wordpress();
 
         return Inertia::render('Posts/Create', [
             'templates' => Template::query()
@@ -71,6 +73,10 @@ class PostController extends Controller
             'categories' => PostMedia::query()->whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category')->all(),
             'wpCategories' => $this->wordpressCategories(),
             'googleDriveConfig' => $this->googleDriveConfig(),
+            'wordpressConfig' => [
+                'url' => rtrim($wordpress['url'] ?? '', '/'),
+                'status' => $wordpress['status'] ?? 'unchecked',
+            ],
             'initialPdfMediaId' => $initialPdfMediaId,
         ]);
     }
@@ -226,6 +232,17 @@ class PostController extends Controller
             $uploadedPdfMedia->update(array_merge(['post_id' => $post->id], array_filter($driveMediaUpdates, fn ($v) => $v !== null)));
         } elseif ($pdfMediaId) {
             PostMedia::query()->where('id', $pdfMediaId)->update(array_filter($driveMediaUpdates, fn ($v) => $v !== null));
+        }
+
+        if ($pdfMediaId) {
+            /** @var PostMedia|null $pdfMedia */
+            $pdfMedia = PostMedia::query()->find($pdfMediaId);
+            if ($pdfMedia && ! empty($pdfMedia->drive_web_view_link)) {
+                QrCode::resolvePostQrPlaceholders($post, [
+                    '{drive_url}' => $pdfMedia->drive_web_view_link,
+                    '{{drive_url}}' => $pdfMedia->drive_web_view_link,
+                ]);
+            }
         }
 
         foreach ($validated['channels'] as $channel) {
@@ -743,6 +760,9 @@ class PostController extends Controller
             'pdfMedia:id,file_path,original_name,mime_type,file_size,drive_file_id,drive_file_name,drive_web_view_link,drive_employee_category,drive_announcement_stage,drive_document_date,drive_position_title,drive_sync_status',
         ]);
 
+        $wordpress = app(IntegrationSettingsService::class)->wordpress();
+        $wpTarget = $post->targets->firstWhere('channel', 'wordpress');
+
         return Inertia::render('Posts/Edit', [
             'post' => $post,
             'templates' => Template::query()
@@ -758,6 +778,11 @@ class PostController extends Controller
             'categories' => PostMedia::query()->whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category')->all(),
             'wpCategories' => $this->wordpressCategories(),
             'googleDriveConfig' => $this->googleDriveConfig(),
+            'wordpressConfig' => [
+                'url' => rtrim($wordpress['url'] ?? '', '/'),
+                'status' => $wordpress['status'] ?? 'unchecked',
+                'target_url' => $wpTarget?->external_url,
+            ],
         ]);
     }
 
@@ -938,6 +963,17 @@ class PostController extends Controller
                 : $post->image_editor_data,
             'wp_category_id' => $validated['wp_category_id'] ?? $post->wp_category_id,
         ]);
+
+        if ($pdfMediaId) {
+            /** @var PostMedia|null $targetPdfMedia */
+            $targetPdfMedia = PostMedia::query()->find($pdfMediaId);
+            if ($targetPdfMedia && ! empty($targetPdfMedia->drive_web_view_link)) {
+                QrCode::resolvePostQrPlaceholders($post, [
+                    '{drive_url}' => $targetPdfMedia->drive_web_view_link,
+                    '{{drive_url}}' => $targetPdfMedia->drive_web_view_link,
+                ]);
+            }
+        }
 
         $post->targets()
             ->whereNotIn('channel', $validated['channels'])

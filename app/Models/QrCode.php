@@ -66,7 +66,35 @@ class QrCode extends Model
 
     public function isRedirectable(): bool
     {
-        return $this->is_active && ! $this->isExpired();
+        return $this->is_active
+            && ! $this->isExpired()
+            && ! empty($this->target_url)
+            && ! str_starts_with($this->target_url, '{');
+    }
+
+    /**
+     * Resolve placeholder target URLs (e.g. {drive_url}, {wordpress_url}) on QR codes embedded in a post.
+     *
+     * @param  array<string, string>  $replacements
+     */
+    public static function resolvePostQrPlaceholders(Post $post, array $replacements): void
+    {
+        $elements = $post->image_editor_data['elements'] ?? [];
+        if (! is_array($elements) || empty($replacements)) {
+            return;
+        }
+
+        foreach ($elements as $el) {
+            if (($el['type'] ?? '') === 'qr' && ! empty($el['qrCodeId'])) {
+                /** @var self|null $qr */
+                $qr = self::query()->find($el['qrCodeId']);
+                if ($qr && isset($replacements[$qr->target_url]) && $replacements[$qr->target_url] !== '') {
+                    $qr->update([
+                        'target_url' => $replacements[$qr->target_url],
+                    ]);
+                }
+            }
+        }
     }
 
     public function getScanUrlAttribute(): string
