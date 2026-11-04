@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Search, Plus, QrCode as QrIcon, Check, ExternalLink, Loader2, Sparkles, Link as LinkIcon } from 'lucide-react';
 import axios from 'axios';
 import { generateQrDataUrl } from '@/Utils/qrcode';
@@ -99,7 +100,16 @@ export default function QrSelectorPopover({
     };
 
     const handleQuickCreate = async (e) => {
-        e.preventDefault();
+        if (e) {
+            e.preventDefault?.();
+            e.stopPropagation?.();
+        }
+
+        if (!title.trim() || !targetUrl.trim()) {
+            setCreateError('กรุณากรอกชื่อเรียกและ URL ปลายทาง');
+            return;
+        }
+
         setIsCreating(true);
         setCreateError('');
 
@@ -141,14 +151,23 @@ export default function QrSelectorPopover({
         }
     };
 
+    const handleInputKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleQuickCreate(e);
+        }
+    };
+
     const filteredList = qrList.filter((qr) => {
         const q = search.toLowerCase();
         return qr.title.toLowerCase().includes(q) || qr.code.toLowerCase().includes(q);
     });
 
-    return (
+    const popoverContent = (
         <div
             className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4"
+            onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                     e.stopPropagation();
@@ -263,7 +282,7 @@ export default function QrSelectorPopover({
                             )}
                         </div>
                     ) : (
-                        <form onSubmit={handleQuickCreate} className="space-y-3.5">
+                        <div className="space-y-3.5">
                             {createError && (
                                 <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700">
                                     {createError}
@@ -336,6 +355,7 @@ export default function QrSelectorPopover({
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
+                                    onKeyDown={handleInputKeyDown}
                                     placeholder="เช่น ลิงก์ดาวน์โหลดระเบียบการ"
                                     className="w-full rounded-lg border-slate-300 text-xs focus:border-blue-500 focus:ring-blue-500"
                                     required
@@ -350,6 +370,7 @@ export default function QrSelectorPopover({
                                     type="text"
                                     value={targetUrl}
                                     onChange={(e) => setTargetUrl(e.target.value)}
+                                    onKeyDown={handleInputKeyDown}
                                     placeholder="https://drive.google.com/..."
                                     className="w-full rounded-lg border-slate-300 text-xs focus:border-blue-500 focus:ring-blue-500 font-mono"
                                     required
@@ -368,6 +389,7 @@ export default function QrSelectorPopover({
                                         type="text"
                                         value={code}
                                         onChange={(e) => setCode(e.target.value)}
+                                        onKeyDown={handleInputKeyDown}
                                         placeholder="quick-link"
                                         className="w-full rounded-none rounded-r-lg border-slate-300 text-xs focus:border-blue-500 focus:ring-blue-500 font-mono"
                                     />
@@ -410,17 +432,20 @@ export default function QrSelectorPopover({
                                     ยกเลิก
                                 </button>
                                 <button
-                                    type="submit"
+                                    type="button"
+                                    onClick={handleQuickCreate}
                                     disabled={isCreating}
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#000080] px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-900 disabled:opacity-50"
                                 >
                                     {isCreating ? 'กำลังสร้าง...' : 'สร้างและแทรกลงในภาพ'}
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     )}
                 </div>
             </div>
         </div>
     );
+
+    return typeof document !== 'undefined' ? createPortal(popoverContent, document.body) : popoverContent;
 }
