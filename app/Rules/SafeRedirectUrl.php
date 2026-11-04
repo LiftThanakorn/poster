@@ -32,38 +32,34 @@ class SafeRedirectUrl implements ValidationRule
             return;
         }
 
-        $filtered = filter_var($value, FILTER_VALIDATE_URL);
-        if ($filtered === false) {
+        $parts = parse_url($value);
+        if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
             $fail('รูปแบบ URL ปลายทางไม่ถูกต้อง');
 
             return;
         }
 
-        $parts = parse_url($value);
-        $scheme = strtolower($parts['scheme'] ?? '');
+        $scheme = strtolower($parts['scheme']);
         if (! in_array($scheme, ['http', 'https'], true)) {
             $fail('URL ปลายทางต้องขึ้นต้นด้วย http:// หรือ https:// เท่านั้น');
 
             return;
         }
 
-        $host = strtolower($parts['host'] ?? '');
-        if ($host === '') {
-            $fail('ไม่พบ Host ใน URL ปลายทาง');
+        $host = strtolower($parts['host']);
 
-            return;
-        }
+        // Block localhost, .local, .internal, .test domains in production
+        if (! app()->environment('local', 'testing')) {
+            if (
+                $host === 'localhost' ||
+                str_ends_with($host, '.local') ||
+                str_ends_with($host, '.internal') ||
+                str_ends_with($host, '.test')
+            ) {
+                $fail('ไม่อนุญาตให้ใช้ที่อยู่เครื่องภายใน (Localhost / Internal domain)');
 
-        // Block localhost, .local, .internal, .test domains
-        if (
-            $host === 'localhost' ||
-            str_ends_with($host, '.local') ||
-            str_ends_with($host, '.internal') ||
-            str_ends_with($host, '.test')
-        ) {
-            $fail('ไม่อนุญาตให้ใช้ที่อยู่เครื่องภายใน (Localhost / Internal domain)');
-
-            return;
+                return;
+            }
         }
 
         // If host is an IP literal, validate that it is not private / reserved / loopback

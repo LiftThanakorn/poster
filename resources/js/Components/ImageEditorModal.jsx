@@ -312,7 +312,8 @@ export default function ImageEditorModal({
         Promise.all(
             qrElementsWithoutSrc.map(async (el) => {
                 const styling = el.styling || {};
-                const dataUrl = await generateQrDataUrl(el.scanUrl, {
+                const scanUrl = el.scanUrl || (el.code ? `${window.location.origin}/qr/${el.code}` : (el.targetUrl || 'https://example.com'));
+                const dataUrl = await generateQrDataUrl(scanUrl, {
                     size: 800,
                     margin: Number(styling.margin) || 2,
                     errorCorrectionLevel: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
@@ -363,7 +364,8 @@ export default function ImageEditorModal({
         const nextStyling = { ...currentStyling, ...patch };
 
         try {
-            const dataUrl = await generateQrDataUrl(selectedElement.scanUrl, {
+            const scanUrl = selectedElement.scanUrl || (selectedElement.code ? `${window.location.origin}/qr/${selectedElement.code}` : (selectedElement.targetUrl || 'https://example.com'));
+            const dataUrl = await generateQrDataUrl(scanUrl, {
                 size: 800,
                 margin: Number(nextStyling.margin) || 2,
                 errorCorrectionLevel: nextStyling.logoUrl ? 'H' : (nextStyling.errorCorrection || 'H'),

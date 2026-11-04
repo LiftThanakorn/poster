@@ -34,6 +34,11 @@ class QrCode extends Model
         ];
     }
 
+    protected $appends = [
+        'scan_url',
+        'image_url',
+    ];
+
     protected static function booted(): void
     {
         static::saved(function (self $qrCode): void {

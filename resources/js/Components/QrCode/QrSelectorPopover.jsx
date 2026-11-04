@@ -59,35 +59,43 @@ export default function QrSelectorPopover({
     };
 
     const handleSelectExisting = async (qr) => {
+        if (!qr) return;
         const styling = qr.styling || {};
-        const dataUrl = await generateQrDataUrl(qr.scan_url, {
-            size: 800,
-            margin: Number(styling.margin) || 2,
-            errorCorrectionLevel: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
-            darkColor: styling.darkColor || '#000000',
-            lightColor: styling.lightColor || '#ffffff',
-            transparentBg: styling.transparentBg ?? false,
-            logoSrc: styling.logoUrl || null,
-        });
+        const scanUrl = qr.scan_url || (qr.code ? `${window.location.origin}/qr/${qr.code}` : (qr.target_url || `${window.location.origin}/qr/temp`));
 
-        onSelectQr({
-            qrCodeId: qr.id,
-            code: qr.code,
-            title: qr.title,
-            targetUrl: qr.target_url,
-            scanUrl: qr.scan_url,
-            src: dataUrl,
-            styling: {
+        try {
+            const dataUrl = await generateQrDataUrl(scanUrl, {
+                size: 800,
+                margin: Number(styling.margin) || 2,
+                errorCorrectionLevel: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
                 darkColor: styling.darkColor || '#000000',
                 lightColor: styling.lightColor || '#ffffff',
                 transparentBg: styling.transparentBg ?? false,
-                margin: Number(styling.margin) || 2,
-                errorCorrection: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
-                logoMediaId: styling.logoMediaId || null,
-                logoUrl: styling.logoUrl || null,
-            },
-        });
-        onClose();
+                logoSrc: styling.logoUrl || null,
+            });
+
+            onSelectQr?.({
+                qrCodeId: qr.id,
+                code: qr.code,
+                title: qr.title,
+                targetUrl: qr.target_url,
+                scanUrl: scanUrl,
+                src: dataUrl,
+                styling: {
+                    darkColor: styling.darkColor || '#000000',
+                    lightColor: styling.lightColor || '#ffffff',
+                    transparentBg: styling.transparentBg ?? false,
+                    margin: Number(styling.margin) || 2,
+                    errorCorrection: styling.logoUrl ? 'H' : (styling.errorCorrection || 'H'),
+                    logoMediaId: styling.logoMediaId || null,
+                    logoUrl: styling.logoUrl || null,
+                },
+            });
+            onClose?.();
+        } catch (err) {
+            console.error('Failed to generate QR data URL:', err);
+            setCreateError(err.message || 'เกิดข้อผิดพลาดในการประมวลผล QR Code');
+        }
     };
 
     const handleQuickCreate = async (e) => {
@@ -96,10 +104,9 @@ export default function QrSelectorPopover({
         setCreateError('');
 
         try {
-            const res = await axios.post(route('qr-codes.store'), {
+            const payload = {
                 title: title.trim(),
                 target_url: targetUrl.trim(),
-                code: code.trim() || undefined,
                 is_active: true,
                 styling: {
                     darkColor,
@@ -108,18 +115,25 @@ export default function QrSelectorPopover({
                     margin: 2,
                     errorCorrection: 'H',
                 },
-            }, {
+            };
+            if (code && code.trim()) {
+                payload.code = code.trim();
+            }
+
+            const res = await axios.post(route('qr-codes.store'), payload, {
                 headers: { Accept: 'application/json' },
             });
 
             const newQr = res.data.qr_code;
             await handleSelectExisting(newQr);
         } catch (err) {
+            console.error('Failed to create QR code:', err);
             setCreateError(
                 err.response?.data?.errors?.target_url?.[0] ||
                 err.response?.data?.errors?.code?.[0] ||
                 err.response?.data?.errors?.title?.[0] ||
                 err.response?.data?.message ||
+                err.message ||
                 'ไม่สามารถสร้าง QR Code ได้'
             );
         } finally {

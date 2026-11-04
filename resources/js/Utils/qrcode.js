@@ -30,6 +30,10 @@ function loadImage(src) {
  * @returns {Promise<string>}
  */
 export async function generateQrDataUrl(url, options = {}) {
+    const safeUrl = (typeof url === 'string' && url.trim() !== '')
+        ? url.trim()
+        : 'https://example.com';
+
     const {
         size = 800,
         margin = 2,
@@ -41,7 +45,7 @@ export async function generateQrDataUrl(url, options = {}) {
         logoSizeRatio = 0.22, // 22% of QR width is optimal for error recovery
     } = options;
 
-    const baseDataUrl = await QRCode.toDataURL(url, {
+    const baseDataUrl = await QRCode.toDataURL(safeUrl, {
         width: size,
         margin,
         errorCorrectionLevel,
