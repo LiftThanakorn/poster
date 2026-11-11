@@ -47,20 +47,22 @@ class PublishPostJob implements ShouldBeUnique, ShouldQueue
             Log::warning('Drive sync failed in PublishPostJob: '.$e->getMessage());
         }
 
-        $wordpressTarget = $this->post->targets()
-            ->where('channel', 'wordpress')
+        $wordpressTargets = $this->post->targets()
+            ->whereIn('channel', ['wordpress', 'wordpress_secondary'])
             ->whereIn('status', ['pending', 'queued', 'processing', 'retrying', 'failed'])
-            ->first();
+            ->get();
 
-        if ($wordpressTarget && $wordpressTarget->status !== 'published') {
-            if ($wordpressTarget->status === 'failed') {
-                $wordpressTarget->update([
-                    'status' => 'pending',
-                    'error_message' => null,
-                ]);
+        foreach ($wordpressTargets as $wordpressTarget) {
+            if ($wordpressTarget->status !== 'published') {
+                if ($wordpressTarget->status === 'failed') {
+                    $wordpressTarget->update([
+                        'status' => 'pending',
+                        'error_message' => null,
+                    ]);
+                }
+
+                PublishWordPressJob::dispatch($this->post->id, $wordpressTarget->id);
             }
-
-            PublishWordPressJob::dispatch($this->post->id, $wordpressTarget->id);
         }
 
         $facebookTarget = $this->post->targets()

@@ -2,7 +2,19 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import PostForm from '@/Components/PostForm';
 
-export default function Edit({ auth, post, templates, mediaList, folders = [], categories = [], wpCategories, googleDriveConfig = {}, wordpressConfig = {} }) {
+export default function Edit({
+    auth,
+    post,
+    templates,
+    mediaList,
+    folders = [],
+    categories = [],
+    wpCategories,
+    wpSecondaryCategories = [],
+    googleDriveConfig = {},
+    wordpressConfig = {},
+    wordpressSecondaryConfig = {},
+}) {
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -15,6 +27,7 @@ export default function Edit({ auth, post, templates, mediaList, folders = [], c
                         mode="edit"
                         initialData={{
                             title: post.title || '',
+                            post_type: post.post_type || 'recruitment',
                             wp_content: post.wp_content || '',
                             fb_caption: post.fb_caption || '',
                             fb_comment: post.fb_comment || '',
@@ -33,6 +46,7 @@ export default function Edit({ auth, post, templates, mediaList, folders = [], c
                             featured_image_id: post.featured_image_id || null,
                             image_editor_data: post.image_editor_data || null,
                             wp_category_id: post.wp_category_id || '',
+                            wp_secondary_category_id: post.wp_secondary_category_id || '',
                             status: post.status,
                             is_facebook_replacement: Boolean(post.replacement_of_post_id),
                             facebook_target_published: (post.targets || []).some(
@@ -44,8 +58,10 @@ export default function Edit({ auth, post, templates, mediaList, folders = [], c
                         folders={folders}
                         categories={categories}
                         wpCategories={wpCategories}
+                        wpSecondaryCategories={wpSecondaryCategories}
                         googleDriveConfig={googleDriveConfig}
                         wordpressConfig={wordpressConfig}
+                        wordpressSecondaryConfig={wordpressSecondaryConfig}
                         submitUrl={route('posts.update', post.id)}
                         submitMethod="put"
                         postId={post.id}

@@ -50,7 +50,7 @@ class PublishWordPressJob implements ShouldQueue
         $post = Post::query()->find($this->postId);
         $target = PublishTarget::query()->find($this->targetId);
 
-        if (! $post || ! $target || $target->channel !== 'wordpress') {
+        if (! $post || ! $target || ! in_array($target->channel, ['wordpress', 'wordpress_secondary'], true)) {
             return;
         }
 
@@ -97,10 +97,12 @@ class PublishWordPressJob implements ShouldQueue
             'correlation_id' => (string) Str::uuid(),
             'post_id' => $target->post_id,
             'publish_target_id' => $target->id,
-            'channel' => 'wordpress',
+            'channel' => $target->channel,
             'level' => 'error',
             'event_type' => 'job_failed',
-            'message' => 'งานเผยแพร่ WordPress ล้มเหลวและหยุดการลองอัตโนมัติ',
+            'message' => $target->channel === 'wordpress_secondary'
+                ? 'งานเผยแพร่ WordPress (Web 2) ล้มเหลวและหยุดการลองอัตโนมัติ'
+                : 'งานเผยแพร่ WordPress (Web 1) ล้มเหลวและหยุดการลองอัตโนมัติ',
         ]);
 
         app(PublishingService::class)->updatePostStatus($target->post);

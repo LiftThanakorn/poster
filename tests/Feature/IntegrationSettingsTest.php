@@ -97,11 +97,36 @@ class IntegrationSettingsTest extends TestCase
         $this->actingAs($user)
             ->post(route('settings.integrations.check', 'wordpress'))
             ->assertRedirect(route('settings.integrations'))
-            ->assertSessionHas('success', 'เชื่อมต่อ WordPress สำเร็จ');
+            ->assertSessionHas('success', 'เชื่อมต่อ WordPress (Web 1) สำเร็จ');
 
         $this->assertSame(
             'connected',
             IntegrationSetting::query()->where('channel', 'wordpress')->firstOrFail()->status,
+        );
+    }
+
+    public function test_wordpress_secondary_connection_can_be_checked_manually(): void
+    {
+        $user = User::factory()->create();
+
+        IntegrationSetting::query()->create([
+            'channel' => 'wordpress_secondary',
+            'settings' => ['url' => 'https://site2.example.com', 'username' => 'editor2'],
+            'encrypted_credentials' => ['password' => 'app-password-2'],
+        ]);
+
+        Http::fake([
+            'https://site2.example.com/wp-json/wp/v2/users/me' => Http::response(['id' => 2], 200),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('settings.integrations.check', 'wordpress_secondary'))
+            ->assertRedirect(route('settings.integrations'))
+            ->assertSessionHas('success', 'เชื่อมต่อ WordPress (Web 2) สำเร็จ');
+
+        $this->assertSame(
+            'connected',
+            IntegrationSetting::query()->where('channel', 'wordpress_secondary')->firstOrFail()->status,
         );
     }
 

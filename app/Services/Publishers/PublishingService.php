@@ -9,6 +9,7 @@ use App\Models\PublishEvent;
 use App\Models\PublishTarget;
 use App\Models\QrCode;
 use App\Services\GoogleDriveService;
+use App\Services\IntegrationSettingsService;
 use App\Support\SecretSanitizer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -36,7 +37,7 @@ class PublishingService
 
         $targets = $post->targets()
             ->where('status', '!=', 'detached')
-            ->orderByRaw("CASE WHEN channel = 'wordpress' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN channel = 'wordpress' THEN 0 WHEN channel = 'wordpress_secondary' THEN 1 ELSE 2 END")
             ->get();
 
         foreach ($targets as $target) {
@@ -113,8 +114,10 @@ class PublishingService
             'info',
             'publish_started',
             $target->channel === 'wordpress'
-                ? 'กำลังเผยแพร่ข่าวไปยัง WordPress'
-                : 'กำลังเผยแพร่โพสต์ไปยัง Facebook',
+                ? 'กำลังเผยแพร่ข่าวไปยัง WordPress (Web 1)'
+                : ($target->channel === 'wordpress_secondary'
+                    ? 'กำลังเผยแพร่ข่าวไปยัง WordPress (Web 2)'
+                    : 'กำลังเผยแพร่โพสต์ไปยัง Facebook'),
             ['attempt' => $attemptNumber],
         );
 
@@ -151,12 +154,14 @@ class PublishingService
                     'info',
                     'publish_succeeded',
                     $target->channel === 'wordpress'
-                        ? 'เผยแพร่ข่าวไปยัง WordPress สำเร็จ'
-                        : 'เผยแพร่โพสต์ไปยัง Facebook สำเร็จ',
+                        ? 'เผยแพร่ข่าวไปยัง WordPress (Web 1) สำเร็จ'
+                        : ($target->channel === 'wordpress_secondary'
+                            ? 'เผยแพร่ข่าวไปยัง WordPress (Web 2) สำเร็จ'
+                            : 'เผยแพร่โพสต์ไปยัง Facebook สำเร็จ'),
                     ['external_url' => $target->fresh()->external_url],
                 );
 
-                if ($target->channel === 'wordpress' && ! empty($target->fresh()->external_url)) {
+                if (in_array($target->channel, ['wordpress', 'wordpress_secondary'], true) && ! empty($target->fresh()->external_url)) {
                     $freshExternalUrl = $target->fresh()->external_url;
                     QrCode::resolvePostQrPlaceholders($post, [
                         '{wordpress_url}' => $freshExternalUrl,
@@ -351,7 +356,8 @@ class PublishingService
     private function publisherFor(string $channel): PublisherInterface
     {
         return match ($channel) {
-            'wordpress' => app(WordPressPublisher::class),
+            'wordpress' => new WordPressPublisher(app(IntegrationSettingsService::class), 'wordpress'),
+            'wordpress_secondary' => new WordPressPublisher(app(IntegrationSettingsService::class), 'wordpress_secondary'),
             'facebook' => app(FacebookPublisher::class),
             default => throw new \InvalidArgumentException("Unsupported publishing channel [{$channel}]."),
         };

@@ -91,7 +91,7 @@ export default function Show({ post, replacementOriginal = null }) {
         const result = await Swal.fire({
             icon: 'question',
             title: 'ลองเผยแพร่อีกครั้ง?',
-            text: `ระบบจะลองเฉพาะช่องทาง ${channel === 'wordpress' ? 'WordPress' : 'Facebook'} โดยไม่สร้างโพสต์ช่องทางอื่นซ้ำ`,
+            text: `ระบบจะลองเฉพาะช่องทาง ${channel === 'facebook' ? 'Facebook' : (channel === 'wordpress_secondary' ? 'WordPress Web 2' : 'WordPress Web 1')} โดยไม่สร้างโพสต์ช่องทางอื่นซ้ำ`,
             showCancelButton: true,
             confirmButtonText: 'ลองใหม่',
             cancelButtonText: 'ยกเลิก',

@@ -23,20 +23,33 @@ class IntegrationController extends Controller
     public function index(): Response
     {
         $wordpress = $this->settings->wordpress();
+        $wordpressSecondary = $this->settings->wordpressSecondary();
         $facebook = $this->settings->facebook();
         $googleDrive = $this->settings->googleDrive();
 
         $wordpressConfigured = $wordpress['url'] !== ''
             && $wordpress['username'] !== ''
             && $wordpress['password'] !== '';
+        $wordpressSecondaryConfigured = $wordpressSecondary['url'] !== ''
+            && $wordpressSecondary['username'] !== ''
+            && $wordpressSecondary['password'] !== '';
         $facebookConfigured = $facebook['page_id'] !== ''
             && $facebook['access_token'] !== '';
         $googleDriveConfigured = $googleDrive['configured'];
 
         $wordpressHealth = $wordpressConfigured
             ? Cache::remember('integrations.wordpress.health', now()->addMinutes(5), function (): bool {
-                $connected = app(WordPressPublisher::class)->healthCheck();
-                $this->settings->markHealth('wordpress', $connected, $connected ? null : 'ไม่สามารถเชื่อมต่อ WordPress ได้');
+                $connected = (new WordPressPublisher($this->settings, 'wordpress'))->healthCheck();
+                $this->settings->markHealth('wordpress', $connected, $connected ? null : 'ไม่สามารถเชื่อมต่อ WordPress (Web 1) ได้');
+
+                return $connected;
+            })
+            : false;
+
+        $wordpressSecondaryHealth = $wordpressSecondaryConfigured
+            ? Cache::remember('integrations.wordpress_secondary.health', now()->addMinutes(5), function (): bool {
+                $connected = (new WordPressPublisher($this->settings, 'wordpress_secondary'))->healthCheck();
+                $this->settings->markHealth('wordpress_secondary', $connected, $connected ? null : 'ไม่สามารถเชื่อมต่อ WordPress (Web 2) ได้');
 
                 return $connected;
             })
@@ -59,10 +72,6 @@ class IntegrationController extends Controller
             })
             : false;
 
-        $wordpress = $this->settings->wordpress();
-        $facebook = $this->settings->facebook();
-        $googleDrive = $this->settings->googleDrive();
-
         return Inertia::render('Settings/Integrations', [
             'wordpress' => [
                 'url' => $wordpress['url'],
@@ -72,6 +81,15 @@ class IntegrationController extends Controller
                 'status' => $wordpressConfigured ? ($wordpressHealth ? 'connected' : 'error') : 'disconnected',
                 'configured' => $wordpressConfigured,
                 'last_checked_at' => $wordpress['last_checked_at']?->toIso8601String(),
+            ],
+            'wordpressSecondary' => [
+                'url' => $wordpressSecondary['url'],
+                'username' => $wordpressSecondary['username'],
+                'password' => '',
+                'password_configured' => $wordpressSecondary['password'] !== '',
+                'status' => $wordpressSecondaryConfigured ? ($wordpressSecondaryHealth ? 'connected' : 'error') : 'disconnected',
+                'configured' => $wordpressSecondaryConfigured,
+                'last_checked_at' => $wordpressSecondary['last_checked_at']?->toIso8601String(),
             ],
             'facebook' => [
                 'page_id' => $facebook['page_id'],
@@ -108,6 +126,9 @@ class IntegrationController extends Controller
             'wordpress_url' => 'nullable|url|max:2048',
             'wordpress_username' => 'nullable|string|max:255',
             'wordpress_password' => 'nullable|string|max:1024',
+            'wordpress_secondary_url' => 'nullable|url|max:2048',
+            'wordpress_secondary_username' => 'nullable|string|max:255',
+            'wordpress_secondary_password' => 'nullable|string|max:1024',
             'facebook_page_id' => 'nullable|string|max:255',
             'facebook_access_token' => 'nullable|string|max:4096',
             'google_drive_client_id' => 'nullable|string|max:512',
@@ -124,6 +145,12 @@ class IntegrationController extends Controller
             (string) ($validated['wordpress_url'] ?? ''),
             (string) ($validated['wordpress_username'] ?? ''),
             $validated['wordpress_password'] ?? null,
+        );
+
+        $this->settings->updateWordPressSecondary(
+            (string) ($validated['wordpress_secondary_url'] ?? ''),
+            (string) ($validated['wordpress_secondary_username'] ?? ''),
+            $validated['wordpress_secondary_password'] ?? null,
         );
 
         $this->settings->updateFacebook(
@@ -152,7 +179,7 @@ class IntegrationController extends Controller
 
     public function check(string $channel): RedirectResponse
     {
-        abort_unless(in_array($channel, ['wordpress', 'facebook', 'google_drive'], true), 404);
+        abort_unless(in_array($channel, ['wordpress', 'wordpress_secondary', 'facebook', 'google_drive'], true), 404);
 
         Cache::forget("integrations.{$channel}.health");
         Cache::forget("integrations.{$channel}.health_check");
@@ -164,10 +191,15 @@ class IntegrationController extends Controller
             $errorMsg = $checkResult['error'] ?? 'ไม่สามารถเชื่อมต่อ Google Drive ได้';
         } else {
             $connected = match ($channel) {
-                'wordpress' => app(WordPressPublisher::class)->healthCheck(),
+                'wordpress' => (new WordPressPublisher($this->settings, 'wordpress'))->healthCheck(),
+                'wordpress_secondary' => (new WordPressPublisher($this->settings, 'wordpress_secondary'))->healthCheck(),
                 'facebook' => app(FacebookPublisher::class)->healthCheck(),
             };
-            $label = $channel === 'wordpress' ? 'WordPress' : 'Facebook Page';
+            $label = match ($channel) {
+                'wordpress' => 'WordPress (Web 1)',
+                'wordpress_secondary' => 'WordPress (Web 2)',
+                'facebook' => 'Facebook Page',
+            };
             $errorMsg = "ไม่สามารถเชื่อมต่อ {$label} ได้";
             $this->settings->markHealth($channel, $connected, $connected ? null : $errorMsg);
         }
@@ -247,9 +279,12 @@ class IntegrationController extends Controller
     private function forgetIntegrationCaches(): void
     {
         Cache::forget('integrations.wordpress.health');
+        Cache::forget('integrations.wordpress_secondary.health');
+        Cache::forget('integrations.wordpress_secondary.health_check');
         Cache::forget('integrations.facebook.health');
         Cache::forget('integrations.google_drive.health');
         Cache::forget('integrations.google_drive.health_check');
         Cache::forget('wordpress.categories');
+        Cache::forget('wordpress_secondary.categories');
     }
 }

@@ -57,7 +57,9 @@ class PostController extends Controller
     public function create(Request $request)
     {
         $initialPdfMediaId = $request->query('pdf_media_id') ? (int) $request->query('pdf_media_id') : null;
-        $wordpress = app(IntegrationSettingsService::class)->wordpress();
+        $settingsService = app(IntegrationSettingsService::class);
+        $wordpress = $settingsService->wordpress();
+        $wordpressSecondary = $settingsService->wordpressSecondary();
 
         return Inertia::render('Posts/Create', [
             'templates' => Template::query()
@@ -71,11 +73,16 @@ class PostController extends Controller
             'mediaList' => $this->postFormMediaList($initialPdfMediaId),
             'folders' => MediaFolder::query()->orderBy('name')->get(['id', 'name', 'color']),
             'categories' => PostMedia::query()->whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category')->all(),
-            'wpCategories' => $this->wordpressCategories(),
+            'wpCategories' => $this->wordpressCategories('wordpress'),
+            'wpSecondaryCategories' => $this->wordpressCategories('wordpress_secondary'),
             'googleDriveConfig' => $this->googleDriveConfig(),
             'wordpressConfig' => [
                 'url' => rtrim($wordpress['url'] ?? '', '/'),
                 'status' => $wordpress['status'] ?? 'unchecked',
+            ],
+            'wordpressSecondaryConfig' => [
+                'url' => rtrim($wordpressSecondary['url'] ?? '', '/'),
+                'status' => $wordpressSecondary['status'] ?? 'unchecked',
             ],
             'initialPdfMediaId' => $initialPdfMediaId,
         ]);
@@ -108,6 +115,7 @@ class PostController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'post_type' => 'nullable|string|in:recruitment,general',
             'wp_content' => 'nullable|string',
             'fb_caption' => 'nullable|string',
             'fb_comment' => 'nullable|string',
@@ -124,7 +132,7 @@ class PostController extends Controller
             'drive_position_title' => 'nullable|string|max:255',
             'drive_custom_filename' => 'nullable|string|max:255',
             'channels' => 'required|array|min:1',
-            'channels.*' => 'in:wordpress,facebook',
+            'channels.*' => 'in:wordpress,facebook,wordpress_secondary',
             'publish_action' => 'required|in:draft,publish,schedule',
             'scheduled_at' => 'nullable|required_if:publish_action,schedule|date|after:now',
             'featured_image_id' => 'nullable|integer',
@@ -137,6 +145,7 @@ class PostController extends Controller
             'image_editor_data.backgroundImage.mediaId' => 'nullable|integer|exists:post_media,id',
             'image_editor_data.elements' => 'nullable|array|max:100',
             'wp_category_id' => 'nullable|integer',
+            'wp_secondary_category_id' => 'nullable|integer',
             'file' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
         ]);
 
@@ -195,6 +204,7 @@ class PostController extends Controller
 
         $post = Post::create([
             'title' => $validated['title'],
+            'post_type' => $validated['post_type'] ?? 'recruitment',
             'slug' => Str::slug($validated['title']).'-'.uniqid(),
             'wp_content' => $validated['wp_content'] ?? null,
             'fb_caption' => $validated['fb_caption'] ?? null,
@@ -213,6 +223,7 @@ class PostController extends Controller
             'featured_image_id' => $featuredImageId,
             'image_editor_data' => $validated['image_editor_data'] ?? null,
             'wp_category_id' => $validated['wp_category_id'] ?? null,
+            'wp_secondary_category_id' => $validated['wp_secondary_category_id'] ?? null,
             'published_at' => null,
         ]);
 
@@ -352,7 +363,7 @@ class PostController extends Controller
 
     public function retry(Post $post, string $channel): JsonResponse
     {
-        abort_unless(in_array($channel, ['wordpress', 'facebook'], true), 404);
+        abort_unless(in_array($channel, ['wordpress', 'wordpress_secondary', 'facebook'], true), 404);
 
         $target = $post->targets()
             ->where('channel', $channel)
@@ -394,6 +405,7 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'title' => 'nullable|string|max:255',
+            'post_type' => 'nullable|string|in:recruitment,general',
             'wp_content' => 'nullable|string',
             'fb_caption' => 'nullable|string',
             'fb_comment' => 'nullable|string',
@@ -408,8 +420,9 @@ class PostController extends Controller
             'drive_document_date' => 'nullable|date',
             'drive_position_title' => 'nullable|string|max:255',
             'channels' => 'nullable|array',
-            'channels.*' => 'in:wordpress,facebook',
+            'channels.*' => 'in:wordpress,facebook,wordpress_secondary',
             'wp_category_id' => 'nullable|integer',
+            'wp_secondary_category_id' => 'nullable|integer',
             'featured_image_id' => 'nullable|integer|exists:post_media,id',
             'image_editor_data' => 'nullable|array',
         ]);
@@ -427,6 +440,7 @@ class PostController extends Controller
 
         $post = Post::query()->create([
             'title' => $title,
+            'post_type' => $validated['post_type'] ?? 'recruitment',
             'slug' => Str::slug($title).'-'.Str::lower(Str::random(8)),
             'wp_content' => $validated['wp_content'] ?? null,
             'fb_caption' => $validated['fb_caption'] ?? null,
@@ -442,6 +456,7 @@ class PostController extends Controller
             'status' => 'draft',
             'author_id' => $request->user()->id,
             'wp_category_id' => $validated['wp_category_id'] ?? null,
+            'wp_secondary_category_id' => $validated['wp_secondary_category_id'] ?? null,
             'featured_image_id' => $validated['featured_image_id'] ?? null,
             'image_editor_data' => $validated['image_editor_data'] ?? null,
         ]);
@@ -473,6 +488,7 @@ class PostController extends Controller
 
         $validated = $request->validate([
             'title' => 'nullable|string|max:255',
+            'post_type' => 'nullable|string|in:recruitment,general',
             'wp_content' => 'nullable|string',
             'fb_caption' => 'nullable|string',
             'fb_comment' => 'nullable|string',
@@ -487,8 +503,9 @@ class PostController extends Controller
             'drive_document_date' => 'nullable|date',
             'drive_position_title' => 'nullable|string|max:255',
             'channels' => 'nullable|array',
-            'channels.*' => 'in:wordpress,facebook',
+            'channels.*' => 'in:wordpress,facebook,wordpress_secondary',
             'wp_category_id' => 'nullable|integer',
+            'wp_secondary_category_id' => 'nullable|integer',
             'featured_image_id' => 'nullable|integer|exists:post_media,id',
             'image_editor_data' => 'nullable|array',
         ]);
@@ -547,6 +564,7 @@ class PostController extends Controller
     {
         $copy = Post::query()->create([
             'title' => $post->title,
+            'post_type' => $post->post_type,
             'slug' => Str::slug($post->title).'-copy-'.Str::lower(Str::random(8)),
             'wp_content' => $post->wp_content,
             'fb_caption' => $post->fb_caption,
@@ -560,6 +578,7 @@ class PostController extends Controller
             'drive_document_date' => $post->drive_document_date,
             'drive_position_title' => $post->drive_position_title,
             'wp_category_id' => $post->wp_category_id,
+            'wp_secondary_category_id' => $post->wp_secondary_category_id,
             'featured_image_id' => $post->featured_image_id,
             'image_editor_data' => $post->image_editor_data,
             'status' => 'draft',
@@ -760,8 +779,11 @@ class PostController extends Controller
             'pdfMedia:id,file_path,original_name,mime_type,file_size,drive_file_id,drive_file_name,drive_web_view_link,drive_employee_category,drive_announcement_stage,drive_document_date,drive_position_title,drive_sync_status',
         ]);
 
-        $wordpress = app(IntegrationSettingsService::class)->wordpress();
+        $settingsService = app(IntegrationSettingsService::class);
+        $wordpress = $settingsService->wordpress();
+        $wordpressSecondary = $settingsService->wordpressSecondary();
         $wpTarget = $post->targets->firstWhere('channel', 'wordpress');
+        $wpSecondaryTarget = $post->targets->firstWhere('channel', 'wordpress_secondary');
 
         return Inertia::render('Posts/Edit', [
             'post' => $post,
@@ -776,12 +798,18 @@ class PostController extends Controller
             'mediaList' => $this->postFormMediaList($post->featured_image_id, $post->pdf_media_id),
             'folders' => MediaFolder::query()->orderBy('name')->get(['id', 'name', 'color']),
             'categories' => PostMedia::query()->whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category')->all(),
-            'wpCategories' => $this->wordpressCategories(),
+            'wpCategories' => $this->wordpressCategories('wordpress'),
+            'wpSecondaryCategories' => $this->wordpressCategories('wordpress_secondary'),
             'googleDriveConfig' => $this->googleDriveConfig(),
             'wordpressConfig' => [
                 'url' => rtrim($wordpress['url'] ?? '', '/'),
                 'status' => $wordpress['status'] ?? 'unchecked',
                 'target_url' => $wpTarget?->external_url,
+            ],
+            'wordpressSecondaryConfig' => [
+                'url' => rtrim($wordpressSecondary['url'] ?? '', '/'),
+                'status' => $wordpressSecondary['status'] ?? 'unchecked',
+                'target_url' => $wpSecondaryTarget?->external_url,
             ],
         ]);
     }
@@ -813,6 +841,7 @@ class PostController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'post_type' => 'nullable|string|in:recruitment,general',
             'wp_content' => 'nullable|string',
             'fb_caption' => 'nullable|string',
             'fb_comment' => 'nullable|string',
@@ -829,7 +858,7 @@ class PostController extends Controller
             'drive_position_title' => 'nullable|string|max:255',
             'drive_custom_filename' => 'nullable|string|max:255',
             'channels' => 'required|array|min:1',
-            'channels.*' => 'in:wordpress,facebook',
+            'channels.*' => 'in:wordpress,facebook,wordpress_secondary',
             'publish_action' => 'required|in:draft,publish,schedule',
             'scheduled_at' => 'nullable|required_if:publish_action,schedule|date|after:now',
             'featured_image_id' => 'nullable|integer',
@@ -842,6 +871,7 @@ class PostController extends Controller
             'image_editor_data.backgroundImage.mediaId' => 'nullable|integer|exists:post_media,id',
             'image_editor_data.elements' => 'nullable|array|max:100',
             'wp_category_id' => 'nullable|integer',
+            'wp_secondary_category_id' => 'nullable|integer',
             'file' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
         ]);
 
@@ -961,7 +991,9 @@ class PostController extends Controller
             'image_editor_data' => $request->has('image_editor_data')
                 ? ($validated['image_editor_data'] ?? null)
                 : $post->image_editor_data,
+            'post_type' => $validated['post_type'] ?? $post->post_type,
             'wp_category_id' => $validated['wp_category_id'] ?? $post->wp_category_id,
+            'wp_secondary_category_id' => $validated['wp_secondary_category_id'] ?? $post->wp_secondary_category_id,
         ]);
 
         if ($pdfMediaId) {
@@ -1067,16 +1099,21 @@ class PostController extends Controller
         }
     }
 
-    protected function wordpressCategories(): array
+    protected function wordpressCategories(string $channel = 'wordpress'): array
     {
-        $wordpress = app(IntegrationSettingsService::class)->wordpress();
+        $settingsService = app(IntegrationSettingsService::class);
+        $wordpress = $channel === 'wordpress_secondary'
+            ? $settingsService->wordpressSecondary()
+            : $settingsService->wordpress();
         $url = rtrim($wordpress['url'], '/');
 
         if ($url === '' || $wordpress['username'] === '') {
             return [];
         }
 
-        return Cache::remember('wordpress.categories', now()->addHour(), function () use ($url): array {
+        $cacheKey = $channel === 'wordpress_secondary' ? 'wordpress_secondary.categories' : 'wordpress.categories';
+
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($url): array {
             try {
                 $response = Http::connectTimeout(2)
                     ->timeout(5)
@@ -1127,7 +1164,11 @@ class PostController extends Controller
         $message = 'ลบโพสต์สำเร็จ';
         if ($remoteTargets->isNotEmpty()) {
             $channels = $remoteTargets
-                ->map(fn ($target) => $target->channel === 'wordpress' ? 'WordPress' : 'Facebook')
+                ->map(fn ($target) => match ($target->channel) {
+                    'wordpress' => 'WordPress (Web 1)',
+                    'wordpress_secondary' => 'WordPress (Web 2)',
+                    default => 'Facebook',
+                })
                 ->implode(' และ ');
             $message .= " — กำลังลบบน {$channels} เบื้องหลัง";
         }

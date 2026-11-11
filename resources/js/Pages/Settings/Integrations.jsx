@@ -66,8 +66,9 @@ function LastChecked({ value }) {
     );
 }
 
-export default function Integrations({ wordpress, facebook, googleDrive = {} }) {
+export default function Integrations({ wordpress, wordpressSecondary = {}, facebook, googleDrive = {} }) {
     const [showWordPressPassword, setShowWordPressPassword] = useState(false);
+    const [showWordPressSecondaryPassword, setShowWordPressSecondaryPassword] = useState(false);
     const [showFacebookToken, setShowFacebookToken] = useState(false);
     const [showGoogleDriveSecret, setShowGoogleDriveSecret] = useState(false);
     const [checkingChannel, setCheckingChannel] = useState(null);
@@ -88,6 +89,9 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
         wordpress_url: wordpress.url || '',
         wordpress_username: wordpress.username || '',
         wordpress_password: '',
+        wordpress_secondary_url: wordpressSecondary.url || '',
+        wordpress_secondary_username: wordpressSecondary.username || '',
+        wordpress_secondary_password: '',
         facebook_page_id: facebook.page_id || '',
         facebook_access_token: '',
         google_drive_client_id: googleDrive.client_id || '',
@@ -104,7 +108,7 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
         post(route('settings.integrations.update'), {
             preserveScroll: true,
             onSuccess: () => {
-                reset('wordpress_password', 'facebook_access_token', 'google_drive_client_secret');
+                reset('wordpress_password', 'wordpress_secondary_password', 'facebook_access_token', 'google_drive_client_secret');
             },
         });
     };
@@ -172,7 +176,7 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
 
-                    <div className="grid gap-4 lg:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-center gap-3">
@@ -180,8 +184,8 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                         <WordPressIcon className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-slate-900">WordPress</p>
-                                        <p className="text-sm text-slate-500">เผยแพร่ข่าวและรูปประกอบไปยังเว็บไซต์</p>
+                                        <p className="font-semibold text-slate-900">WordPress (Web 1)</p>
+                                        <p className="text-sm text-slate-500">เว็บหลัก / รับสมัครงาน</p>
                                     </div>
                                 </div>
                                 <StatusBadge status={wordpress.status} />
@@ -199,6 +203,38 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                         className="inline-flex items-center gap-1.5 font-medium text-[#000080] hover:text-blue-900 disabled:opacity-50"
                                     >
                                         <RefreshCw className={`h-3.5 w-3.5 ${checkingChannel === 'wordpress' ? 'animate-spin' : ''}`} />
+                                        ตรวจสอบ
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-xl bg-[#21759B]/10 p-2.5 text-[#21759B]">
+                                        <WordPressIcon className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900">WordPress (Web 2)</p>
+                                        <p className="text-sm text-slate-500">เว็บข่าวทั่วไป / ประชาสัมพันธ์</p>
+                                    </div>
+                                </div>
+                                <StatusBadge status={wordpressSecondary.status} />
+                            </div>
+                            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
+                                <div className="flex items-center gap-1.5">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    <LastChecked value={wordpressSecondary.last_checked_at} />
+                                </div>
+                                {wordpressSecondary.configured && (
+                                    <button
+                                        type="button"
+                                        onClick={() => checkConnection('wordpress_secondary')}
+                                        disabled={checkingChannel === 'wordpress_secondary'}
+                                        className="inline-flex items-center gap-1.5 font-medium text-[#000080] hover:text-blue-900 disabled:opacity-50"
+                                    >
+                                        <RefreshCw className={`h-3.5 w-3.5 ${checkingChannel === 'wordpress_secondary' ? 'animate-spin' : ''}`} />
                                         ตรวจสอบ
                                     </button>
                                 )}
@@ -278,8 +314,8 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                     <div className="flex items-center gap-3">
                                         <WordPressIcon className="h-5 w-5 text-[#21759B]" />
                                         <div>
-                                            <h2 className="font-semibold text-slate-900">ตั้งค่า WordPress</h2>
-                                            <p className="mt-0.5 text-sm text-slate-500">ใช้ REST API และ Application Password</p>
+                                            <h2 className="font-semibold text-slate-900">ตั้งค่า WordPress (Web 1)</h2>
+                                            <p className="mt-0.5 text-sm text-slate-500">เว็บหลัก / ข่าวรับสมัครงาน</p>
                                         </div>
                                     </div>
                                 </div>
@@ -287,7 +323,7 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                     <div>
                                         <label htmlFor="wordpress_url" className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
                                             <Link2 className="h-4 w-4 text-slate-400" />
-                                            URL เว็บไซต์
+                                            URL เว็บไซต์ Web 1
                                         </label>
                                         <input
                                             id="wordpress_url"
@@ -310,7 +346,7 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                             type="text"
                                             value={data.wordpress_username}
                                             onChange={(event) => setData('wordpress_username', event.target.value)}
-                                            placeholder="ชื่อผู้ใช้ WordPress"
+                                            placeholder="ชื่อผู้ใช้ WordPress Web 1"
                                             className="block w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-[#000080] focus:ring-[#000080]"
                                         />
                                     </div>
@@ -337,6 +373,77 @@ export default function Integrations({ wordpress, facebook, googleDrive = {} }) 
                                                 aria-label={showWordPressPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
                                             >
                                                 {showWordPressPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
+                                        <p className="mt-1.5 text-xs text-slate-500">ระบบจะไม่แสดงรหัสผ่านเดิมกลับมาบนหน้าเว็บ</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                <div className="border-b border-slate-100 px-6 py-5">
+                                    <div className="flex items-center gap-3">
+                                        <WordPressIcon className="h-5 w-5 text-[#21759B]" />
+                                        <div>
+                                            <h2 className="font-semibold text-slate-900">ตั้งค่า WordPress (Web 2)</h2>
+                                            <p className="mt-0.5 text-sm text-slate-500">เว็บข่าวทั่วไป / ข่าวประชาสัมพันธ์</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-5 p-6">
+                                    <div>
+                                        <label htmlFor="wordpress_secondary_url" className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                            <Link2 className="h-4 w-4 text-slate-400" />
+                                            URL เว็บไซต์ Web 2
+                                        </label>
+                                        <input
+                                            id="wordpress_secondary_url"
+                                            type="url"
+                                            value={data.wordpress_secondary_url}
+                                            onChange={(event) => setData('wordpress_secondary_url', event.target.value)}
+                                            placeholder="https://site2.example.com"
+                                            className="block w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-[#000080] focus:ring-[#000080]"
+                                        />
+                                        {errors.wordpress_secondary_url && <p className="mt-1.5 text-xs text-rose-600">{errors.wordpress_secondary_url}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="wordpress_secondary_username" className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                            <UserRound className="h-4 w-4 text-slate-400" />
+                                            ชื่อผู้ใช้ API
+                                        </label>
+                                        <input
+                                            id="wordpress_secondary_username"
+                                            type="text"
+                                            value={data.wordpress_secondary_username}
+                                            onChange={(event) => setData('wordpress_secondary_username', event.target.value)}
+                                            placeholder="ชื่อผู้ใช้ WordPress Web 2"
+                                            className="block w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-[#000080] focus:ring-[#000080]"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="wordpress_secondary_password" className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                            <KeyRound className="h-4 w-4 text-slate-400" />
+                                            Application Password
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                id="wordpress_secondary_password"
+                                                type={showWordPressSecondaryPassword ? 'text' : 'password'}
+                                                value={data.wordpress_secondary_password}
+                                                onChange={(event) => setData('wordpress_secondary_password', event.target.value)}
+                                                placeholder={wordpressSecondary.password_configured ? 'บันทึกไว้แล้ว — เว้นว่างหากไม่เปลี่ยน' : 'กรอก Application Password'}
+                                                autoComplete="new-password"
+                                                className="block w-full rounded-xl border-slate-300 pr-11 text-sm shadow-sm focus:border-[#000080] focus:ring-[#000080]"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowWordPressSecondaryPassword((value) => !value)}
+                                                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-700"
+                                                aria-label={showWordPressSecondaryPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                                            >
+                                                {showWordPressSecondaryPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
                                         <p className="mt-1.5 text-xs text-slate-500">ระบบจะไม่แสดงรหัสผ่านเดิมกลับมาบนหน้าเว็บ</p>

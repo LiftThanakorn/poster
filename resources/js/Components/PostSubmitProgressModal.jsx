@@ -156,14 +156,20 @@ export default function PostSubmitProgressModal({
                                     }`}
                                 >
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                        {channel === 'wordpress' ? (
-                                            <WordPressIcon className="h-5 w-5 text-[#21759B] shrink-0" />
-                                        ) : (
+                                        {channel === 'facebook' ? (
                                             <FacebookIcon className="h-5 w-5 text-[#1877F2] shrink-0" />
+                                        ) : (
+                                            <WordPressIcon className="h-5 w-5 text-[#21759B] shrink-0" />
                                         )}
                                         <div className="min-w-0">
                                             <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-                                                <span>{channel === 'wordpress' ? 'WordPress' : 'Facebook Page'}</span>
+                                                <span>
+                                                    {channel === 'facebook'
+                                                        ? 'Facebook Page'
+                                                        : (channel === 'wordpress_secondary'
+                                                            ? 'WordPress Web 2'
+                                                            : 'WordPress Web 1')}
+                                                </span>
                                                 {tStatus === 'published' && (
                                                     <span className="text-[10px] text-emerald-700 bg-emerald-100 font-medium px-1.5 py-0.2 rounded">
                                                         โพสต์จริงแล้ว

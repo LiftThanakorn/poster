@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\PublishTarget;
+use App\Services\IntegrationSettingsService;
 use App\Services\Publishers\FacebookPublisher;
 use App\Services\Publishers\PublisherInterface;
 use App\Services\Publishers\WordPressPublisher;
@@ -71,7 +72,8 @@ class DeleteExternalPostJob implements ShouldQueue
     private function publisher(): PublisherInterface
     {
         return match ($this->channel) {
-            'wordpress' => app(WordPressPublisher::class),
+            'wordpress' => new WordPressPublisher(app(IntegrationSettingsService::class), 'wordpress'),
+            'wordpress_secondary' => new WordPressPublisher(app(IntegrationSettingsService::class), 'wordpress_secondary'),
             'facebook' => app(FacebookPublisher::class),
             default => throw new InvalidArgumentException("Unsupported channel: {$this->channel}"),
         };

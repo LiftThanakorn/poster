@@ -20,8 +20,10 @@ export default function PostForm({
     folders = [],
     categories = [],
     wpCategories, 
+    wpSecondaryCategories = [],
     googleDriveConfig = {},
     wordpressConfig = {},
+    wordpressSecondaryConfig = {},
     initialPdfMediaId = null,
     submitUrl, 
     submitMethod = 'post',
@@ -57,6 +59,7 @@ export default function PostForm({
 
     const { data, setData, post, put, processing, errors, transform } = useForm({
         title: initialData?.title || '',
+        post_type: initialData?.post_type || 'recruitment',
         wp_content: initialData?.wp_content || '',
         fb_caption: initialData?.fb_caption || '',
         fb_comment: initialData?.fb_comment || '',
@@ -78,13 +81,16 @@ export default function PostForm({
         featured_image_id: initialData?.featured_image_id || null,
         image_editor_data: initialData?.image_editor_data || null,
         wp_category_id: initialData?.wp_category_id || defaultCategory || '',
+        wp_secondary_category_id: initialData?.wp_secondary_category_id || '',
         file: null,
     });
 
     const displayErrors = { ...errors, ...customErrors };
 
     const isWpSelected = data.channels.includes('wordpress');
+    const isWpSecondarySelected = data.channels.includes('wordpress_secondary');
     const isFbSelected = data.channels.includes('facebook');
+    const isAnyWpSelected = isWpSelected || isWpSecondarySelected;
 
     useEffect(() => () => {
         if (previewUrl) {
@@ -106,6 +112,7 @@ export default function PostForm({
 
     const autosaveSnapshot = JSON.stringify({
         title: data.title,
+        post_type: data.post_type,
         wp_content: data.wp_content,
         fb_caption: data.fb_caption,
         fb_comment: data.fb_comment,
@@ -119,6 +126,7 @@ export default function PostForm({
         drive_position_title: data.drive_position_title,
         channels: data.channels,
         wp_category_id: data.wp_category_id || null,
+        wp_secondary_category_id: data.wp_secondary_category_id || null,
         featured_image_id: data.featured_image_id || null,
         image_editor_data: data.image_editor_data || null,
     });
@@ -149,6 +157,7 @@ export default function PostForm({
 
             const payload = {
                 title: data.title,
+                post_type: data.post_type,
                 wp_content: data.wp_content,
                 fb_caption: data.fb_caption,
                 fb_comment: data.fb_comment,
@@ -162,6 +171,7 @@ export default function PostForm({
                 drive_position_title: data.drive_position_title,
                 channels: data.channels,
                 wp_category_id: data.wp_category_id || null,
+                wp_secondary_category_id: data.wp_secondary_category_id || null,
                 featured_image_id: data.featured_image_id || null,
                 image_editor_data: data.image_editor_data || null,
             };
@@ -209,6 +219,7 @@ export default function PostForm({
 
         const formData = new FormData();
         formData.append('title', data.title || '');
+        formData.append('post_type', data.post_type || 'recruitment');
         formData.append('wp_content', data.wp_content || '');
         formData.append('fb_caption', data.fb_caption || '');
         if (data.fb_comment) formData.append('fb_comment', data.fb_comment);
@@ -216,6 +227,7 @@ export default function PostForm({
         formData.append('publish_action', isReplacement ? 'draft' : action);
         if (data.scheduled_at) formData.append('scheduled_at', data.scheduled_at);
         if (data.wp_category_id) formData.append('wp_category_id', data.wp_category_id);
+        if (data.wp_secondary_category_id) formData.append('wp_secondary_category_id', data.wp_secondary_category_id);
         formData.append('featured_image_id', data.featured_image_id ? data.featured_image_id : '');
         formData.append(
             'image_editor_data',
@@ -829,7 +841,35 @@ export default function PostForm({
                         {displayErrors.title && <p className="text-red-500 text-xs mt-1">{displayErrors.title}</p>}
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทเนื้อหา</label>
+                            <div className="flex rounded-lg bg-slate-100 p-1 border border-slate-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setData('post_type', 'recruitment')}
+                                    className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
+                                        data.post_type === 'recruitment'
+                                            ? 'bg-white text-[#000080] shadow-xs'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    📢 ข่าวรับสมัครงาน
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setData('post_type', 'general')}
+                                    className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
+                                        data.post_type === 'general'
+                                            ? 'bg-white text-[#000080] shadow-xs'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    📰 ข่าวประชาสัมพันธ์ทั่วไป
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-700">ดึงข้อมูลจากเทมเพลต (Template)</label>
                             <select 
@@ -856,22 +896,46 @@ export default function PostForm({
                                 </div>
                             )}
                         </div>
-                        {isWpSelected && (
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-gray-700">หมวดหมู่ข่าว (WordPress Category)</label>
-                                <select 
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    value={data.wp_category_id || ''}
-                                    onChange={e => setData('wp_category_id', e.target.value)}
-                                >
-                                    <option value="">-- ไม่ระบุหมวดหมู่ --</option>
-                                    {wpCategories && wpCategories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
                     </div>
+
+                    {(isWpSelected || isWpSecondarySelected) && (
+                        <div className="flex flex-col sm:flex-row gap-4 pt-2 border-t border-slate-100">
+                            {isWpSelected && (
+                                <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        หมวดหมู่ข่าว Web 1 (รับสมัครงาน)
+                                    </label>
+                                    <select 
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                        value={data.wp_category_id || ''}
+                                        onChange={e => setData('wp_category_id', e.target.value)}
+                                    >
+                                        <option value="">-- ไม่ระบุหมวดหมู่ --</option>
+                                        {wpCategories && wpCategories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            {isWpSecondarySelected && (
+                                <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        หมวดหมู่ข่าว Web 2 (ข่าวทั่วไป)
+                                    </label>
+                                    <select 
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                        value={data.wp_secondary_category_id || ''}
+                                        onChange={e => setData('wp_secondary_category_id', e.target.value)}
+                                    >
+                                        <option value="">-- ไม่ระบุหมวดหมู่ --</option>
+                                        {wpSecondaryCategories && wpSecondaryCategories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -879,17 +943,17 @@ export default function PostForm({
             <div className="flex flex-col xl:flex-row gap-6">
                 
                 {/* WordPress Editor */}
-                <div className={`flex-1 bg-white shadow-sm sm:rounded-lg flex flex-col transition-opacity ${!isWpSelected ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+                <div className={`flex-1 bg-white shadow-sm sm:rounded-lg flex flex-col transition-opacity ${!isAnyWpSelected ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
                     <div className="p-6 flex-1 flex flex-col">
                         <div className="flex items-center justify-between mb-4 border-b pb-2">
                             <h3 className="text-lg font-medium text-slate-900 flex items-center">
                                 <WordPressIcon className="w-5 h-5 mr-2 text-[#21759B]" />
-                                เว็บไซต์ WordPress
+                                เว็บไซต์ WordPress {isWpSelected && isWpSecondarySelected ? '(Web 1 & Web 2)' : (isWpSecondarySelected ? '(Web 2)' : (isWpSelected ? '(Web 1)' : ''))}
                             </h3>
-                            {!isWpSelected && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded font-medium">Disabled</span>}
+                            {!isAnyWpSelected && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded font-medium">Disabled</span>}
                         </div>
                         <div className="flex-1 flex flex-col">
-                            {isWpSelected ? (
+                            {isAnyWpSelected ? (
                                 <>
                                     <Suspense fallback={<div className="min-h-[240px] rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">กำลังโหลดเครื่องมือเขียนข่าว...</div>}>
                                         <RichTextEditor
@@ -901,12 +965,12 @@ export default function PostForm({
                                 </>
                             ) : (
                                 <div className="flex min-h-[240px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-                                    เลือกช่องทาง WordPress เพื่อเปิดเครื่องมือเขียนบทความ
+                                    เลือกช่องทาง WordPress (Web 1 หรือ Web 2) เพื่อเปิดเครื่องมือเขียนบทความ
                                 </div>
                             )}
 
                             {/* WordPress Action / Application Buttons */}
-                            {isWpSelected && (
+                            {isAnyWpSelected && (
                                 <div className="mt-6 border-t pt-5">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                                         <div>
@@ -1062,7 +1126,7 @@ export default function PostForm({
                                                     <Sparkles className="w-3 h-3" />
                                                     ใส่ใน Comment #1
                                                 </button>
-                                                {isWpSelected && (
+                                                {isAnyWpSelected && (
                                                     <button
                                                         type="button"
                                                         onClick={addDriveUrlToButtons}
@@ -1543,11 +1607,16 @@ export default function PostForm({
                     <div className="flex-1 w-full flex flex-col sm:flex-row sm:items-center gap-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">ช่องทางเผยแพร่</label>
-                            <div className="flex gap-4 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
+                            <div className="flex flex-wrap gap-4 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
                                 <label className="inline-flex items-center cursor-pointer">
                                     <input type="checkbox" value="wordpress" checked={isWpSelected} disabled={Boolean(initialData?.is_facebook_replacement)} onChange={handleChannelChange} className="rounded border-gray-300 text-[#000080] shadow-sm focus:ring-[#000080] w-4 h-4" />
                                     <WordPressIcon className="h-4 w-4 ml-2 mr-1 text-[#21759B]" />
-                                    <span className="text-sm font-medium text-slate-800">WordPress</span>
+                                    <span className="text-sm font-medium text-slate-800">WordPress Web 1</span>
+                                </label>
+                                <label className="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" value="wordpress_secondary" checked={isWpSecondarySelected} disabled={Boolean(initialData?.is_facebook_replacement)} onChange={handleChannelChange} className="rounded border-gray-300 text-[#000080] shadow-sm focus:ring-[#000080] w-4 h-4" />
+                                    <WordPressIcon className="h-4 w-4 ml-2 mr-1 text-[#21759B]" />
+                                    <span className="text-sm font-medium text-slate-800">WordPress Web 2</span>
                                 </label>
                                 <label className="inline-flex items-center cursor-pointer">
                                     <input type="checkbox" value="facebook" checked={isFbSelected} disabled={Boolean(initialData?.is_facebook_replacement)} onChange={handleChannelChange} className="rounded border-gray-300 text-[#000080] shadow-sm focus:ring-[#000080] w-4 h-4" />

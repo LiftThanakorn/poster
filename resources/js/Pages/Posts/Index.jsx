@@ -156,7 +156,13 @@ export default function Index({ auth, posts, currentStatus = 'all' }) {
                                                                 ) : (
                                                                     <WordPressIcon className="h-3.5 w-3.5 text-[#21759B]" />
                                                                 )}
-                                                                <span>{t.channel === 'facebook' ? 'Facebook' : 'WordPress'}</span>
+                                                                <span>
+                                                                    {t.channel === 'facebook'
+                                                                        ? 'Facebook'
+                                                                        : (t.channel === 'wordpress_secondary'
+                                                                            ? 'WordPress Web 2'
+                                                                            : 'WordPress Web 1')}
+                                                                </span>
                                                                 <span className="text-[10px] opacity-75">({t.status})</span>
                                                             </span>
                                                         ))}

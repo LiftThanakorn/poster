@@ -43,7 +43,11 @@ export default function PublishProgress({ target }) {
                     </div>
                     <div>
                         <p className="text-sm font-semibold text-slate-900">
-                            {target.channel === 'wordpress' ? 'WordPress' : 'Facebook Page'}
+                            {target.channel === 'facebook'
+                                ? 'Facebook Page'
+                                : (target.channel === 'wordpress_secondary'
+                                    ? 'WordPress Web 2'
+                                    : 'WordPress Web 1')}
                         </p>
                         <p className="mt-0.5 text-xs text-slate-500">
                             {STEP_LABELS[target.step] || STEP_LABELS[target.status] || 'กำลังตรวจสอบสถานะ'}

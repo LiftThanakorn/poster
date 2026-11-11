@@ -19,9 +19,15 @@ class WordPressPublisher implements PublisherInterface
 
     protected string $appPassword;
 
-    public function __construct(?IntegrationSettingsService $settings = null)
+    protected string $channel;
+
+    public function __construct(?IntegrationSettingsService $settings = null, string $channel = 'wordpress')
     {
-        $wordpress = ($settings ?? app(IntegrationSettingsService::class))->wordpress();
+        $this->channel = $channel;
+        $settingsService = $settings ?? app(IntegrationSettingsService::class);
+        $wordpress = $channel === 'wordpress_secondary'
+            ? $settingsService->wordpressSecondary()
+            : $settingsService->wordpress();
 
         $this->apiUrl = rtrim($wordpress['url'], '/');
         $this->username = $wordpress['username'];
@@ -178,8 +184,12 @@ HTML;
                 'status' => 'publish',
             ];
 
-            if ($post->wp_category_id) {
-                $payload['categories'] = [$post->wp_category_id];
+            $catId = $target->channel === 'wordpress_secondary'
+                ? $post->wp_secondary_category_id
+                : $post->wp_category_id;
+
+            if ($catId) {
+                $payload['categories'] = [(int) $catId];
             }
 
             if ($post->featured_image_id) {
@@ -241,8 +251,12 @@ HTML;
                 'content' => $this->formatWordPressContent($post),
             ];
 
-            if ($post->wp_category_id) {
-                $payload['categories'] = [$post->wp_category_id];
+            $catId = $target->channel === 'wordpress_secondary'
+                ? $post->wp_secondary_category_id
+                : $post->wp_category_id;
+
+            if ($catId) {
+                $payload['categories'] = [(int) $catId];
             }
 
             if ($post->featured_image_id) {

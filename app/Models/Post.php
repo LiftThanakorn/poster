@@ -8,6 +8,7 @@ class Post extends Model
 {
     protected $fillable = [
         'title',
+        'post_type',
         'replacement_of_post_id',
         'slug',
         'wp_content',
@@ -16,6 +17,7 @@ class Post extends Model
         'fb_comment_2',
         'action_buttons',
         'wp_category_id',
+        'wp_secondary_category_id',
         'status',
         'featured_image_id',
         'image_editor_data',

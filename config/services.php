@@ -41,6 +41,12 @@ return [
         'password' => env('WORDPRESS_APP_PASSWORD'),
     ],
 
+    'wordpress_secondary' => [
+        'url' => env('WORDPRESS_SECONDARY_URL', ''),
+        'username' => env('WORDPRESS_SECONDARY_USERNAME', ''),
+        'password' => env('WORDPRESS_SECONDARY_APP_PASSWORD', ''),
+    ],
+
     'facebook' => [
         'page_id' => env('FACEBOOK_PAGE_ID'),
         'access_token' => env('FACEBOOK_ACCESS_TOKEN'),

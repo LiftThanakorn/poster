@@ -23,7 +23,8 @@ class IntegrationSettingsService
         $normalized = strtolower(trim($provider));
 
         return match ($normalized) {
-            'wp', 'wordpress' => 'wordpress',
+            'wp', 'wordpress', 'wp_main', 'wordpress_primary' => 'wordpress',
+            'wp_secondary', 'wordpress_secondary', 'wordpress2', 'wp2' => 'wordpress_secondary',
             'fb', 'facebook' => 'facebook',
             'google_drive', 'googledrive', 'drive', 'gdrive' => 'google_drive',
             default => $normalized,
@@ -44,6 +45,12 @@ class IntegrationSettingsService
         if ($channel === 'wordpress') {
             return array_merge([
                 'password' => (string) ($credentials['password'] ?? config('services.wordpress.password', '')),
+            ], $credentials);
+        }
+
+        if ($channel === 'wordpress_secondary') {
+            return array_merge([
+                'password' => (string) ($credentials['password'] ?? config('services.wordpress_secondary.password', '')),
             ], $credentials);
         }
 
@@ -79,6 +86,13 @@ class IntegrationSettingsService
             return [
                 'url' => (string) ($settings['url'] ?? config('services.wordpress.url', '')),
                 'username' => (string) ($settings['username'] ?? config('services.wordpress.username', '')),
+            ];
+        }
+
+        if ($channel === 'wordpress_secondary') {
+            return [
+                'url' => (string) ($settings['url'] ?? config('services.wordpress_secondary.url', '')),
+                'username' => (string) ($settings['username'] ?? config('services.wordpress_secondary.username', '')),
             ];
         }
 
@@ -135,7 +149,7 @@ class IntegrationSettingsService
             }
         }
 
-        if ($channel === 'wordpress' && isset($currentSettings['url'])) {
+        if (($channel === 'wordpress' || $channel === 'wordpress_secondary') && isset($currentSettings['url'])) {
             $currentSettings['url'] = rtrim((string) $currentSettings['url'], '/');
         }
 
@@ -374,17 +388,18 @@ class IntegrationSettingsService
      *
      * @return array{status: 'healthy'|'unhealthy', user: ?string, can_publish: bool, roles: array<string>, error: ?string}
      */
-    public function checkWordPressHealth(bool $forceFresh = false): array
+    public function checkWordPressHealth(bool $forceFresh = false, string $channel = 'wordpress'): array
     {
-        $cacheKey = 'integrations.wordpress.health_check';
+        $channel = $this->canonicalChannel($channel);
+        $cacheKey = "integrations.{$channel}.health_check";
 
         if (! $forceFresh && Cache::has($cacheKey)) {
             /** @var array{status: 'healthy'|'unhealthy', user: ?string, can_publish: bool, roles: array<string>, error: ?string} */
             return Cache::get($cacheKey);
         }
 
-        $settings = $this->getSettings('wordpress');
-        $credentials = $this->getCredentials('wordpress');
+        $settings = $this->getSettings($channel);
+        $credentials = $this->getCredentials($channel);
 
         $url = rtrim((string) ($settings['url'] ?? ''), '/');
         $username = (string) ($settings['username'] ?? '');
@@ -398,7 +413,7 @@ class IntegrationSettingsService
                 'roles' => [],
                 'error' => 'WordPress credentials are not configured.',
             ];
-            $this->markHealth('wordpress', false, $result['error']);
+            $this->markHealth($channel, false, $result['error']);
 
             return $result;
         }
@@ -419,8 +434,8 @@ class IntegrationSettingsService
                 ];
 
                 Cache::put($cacheKey, $result, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-                Cache::put('integrations.wordpress.health', false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-                $this->markHealth('wordpress', false, $result['error']);
+                Cache::put("integrations.{$channel}.health", false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
+                $this->markHealth($channel, false, $result['error']);
 
                 return $result;
             }
@@ -435,8 +450,8 @@ class IntegrationSettingsService
                 ];
 
                 Cache::put($cacheKey, $result, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-                Cache::put('integrations.wordpress.health', false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-                $this->markHealth('wordpress', false, $result['error']);
+                Cache::put("integrations.{$channel}.health", false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
+                $this->markHealth($channel, false, $result['error']);
 
                 return $result;
             }
@@ -462,8 +477,8 @@ class IntegrationSettingsService
                 ];
 
                 Cache::put($cacheKey, $result, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-                Cache::put('integrations.wordpress.health', false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-                $this->markHealth('wordpress', false, $result['error']);
+                Cache::put("integrations.{$channel}.health", false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
+                $this->markHealth($channel, false, $result['error']);
 
                 return $result;
             }
@@ -477,8 +492,8 @@ class IntegrationSettingsService
             ];
 
             Cache::put($cacheKey, $result, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-            Cache::put('integrations.wordpress.health', true, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-            $this->markHealth('wordpress', true, null);
+            Cache::put("integrations.{$channel}.health", true, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
+            $this->markHealth($channel, true, null);
 
             return $result;
         } catch (\Throwable $e) {
@@ -491,8 +506,8 @@ class IntegrationSettingsService
             ];
 
             Cache::put($cacheKey, $result, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-            Cache::put('integrations.wordpress.health', false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
-            $this->markHealth('wordpress', false, $result['error']);
+            Cache::put("integrations.{$channel}.health", false, now()->addMinutes(self::HEALTH_CACHE_TTL_MINUTES));
+            $this->markHealth($channel, false, $result['error']);
 
             return $result;
         }
@@ -503,7 +518,7 @@ class IntegrationSettingsService
      */
     public function forgetHealthCache(?string $provider = null): void
     {
-        $channels = $provider ? [$this->canonicalChannel($provider)] : ['wordpress', 'facebook', 'google_drive'];
+        $channels = $provider ? [$this->canonicalChannel($provider)] : ['wordpress', 'wordpress_secondary', 'facebook', 'google_drive'];
 
         foreach ($channels as $channel) {
             Cache::forget("integrations.{$channel}.health_check");
@@ -523,6 +538,24 @@ class IntegrationSettingsService
         $settings = $this->getSettings('wordpress');
         $credentials = $this->getCredentials('wordpress');
         $record = IntegrationSetting::query()->where('channel', 'wordpress')->first();
+
+        return [
+            'url' => (string) ($settings['url'] ?? ''),
+            'username' => (string) ($settings['username'] ?? ''),
+            'password' => (string) ($credentials['password'] ?? ''),
+            'status' => (string) ($record?->status ?? 'unchecked'),
+            'last_checked_at' => $record?->last_checked_at,
+        ];
+    }
+
+    /**
+     * @return array{url:string, username:string, password:string, status:string, last_checked_at:?Carbon}
+     */
+    public function wordpressSecondary(): array
+    {
+        $settings = $this->getSettings('wordpress_secondary');
+        $credentials = $this->getCredentials('wordpress_secondary');
+        $record = IntegrationSetting::query()->where('channel', 'wordpress_secondary')->first();
 
         return [
             'url' => (string) ($settings['url'] ?? ''),
@@ -564,6 +597,21 @@ class IntegrationSettingsService
         ]);
 
         return IntegrationSetting::query()->where('channel', 'wordpress')->firstOrFail();
+    }
+
+    public function updateWordPressSecondary(string $url, string $username, ?string $password = null): IntegrationSetting
+    {
+        $credentials = [];
+        if ($password !== null && $password !== '') {
+            $credentials['password'] = $password;
+        }
+
+        $this->saveCredentials('wordpress_secondary', $credentials, [
+            'url' => $url,
+            'username' => $username,
+        ]);
+
+        return IntegrationSetting::query()->where('channel', 'wordpress_secondary')->firstOrFail();
     }
 
     public function updateFacebook(string $pageId, ?string $accessToken = null): IntegrationSetting
