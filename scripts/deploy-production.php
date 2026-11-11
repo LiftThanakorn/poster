@@ -59,6 +59,10 @@ echo "    - Adding database/migrations/ ...\n";
 $zip->addEmptyDir('database/migrations');
 addFolderToZip($zip, "$projectRoot/database/migrations", 'database/migrations');
 
+echo "    - Adding config/ ...\n";
+$zip->addEmptyDir('config');
+addFolderToZip($zip, "$projectRoot/config", 'config');
+
 echo "    - Adding build/ (Vite assets) ...\n";
 $zip->addEmptyDir('build');
 addFolderToZip($zip, "$projectRoot/public/build", 'build');
@@ -169,6 +173,10 @@ try {
     if (is_dir("$tempDir/database/migrations")) {
         recurseCopy("$tempDir/database/migrations", "$baseDir/database/migrations");
         $res['steps'][] = 'Copied database/migrations/ folder';
+    }
+    if (is_dir("$tempDir/config")) {
+        recurseCopy("$tempDir/config", "$baseDir/config");
+        $res['steps'][] = 'Copied config/ folder';
     }
     if (is_dir("$tempDir/build")) {
         recurseCopy("$tempDir/build", "$baseDir/public/build");
